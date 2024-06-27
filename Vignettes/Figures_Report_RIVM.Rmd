@@ -1,0 +1,507 @@
+---
+title: "RIVM 2024-xxxx report figures"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r init}
+# Initialize
+library(ggplot2)
+library(tidyverse) 
+library(scales)
+library(openxlsx)
+
+################################ Load data #####################################
+# when working from DWO, we can use:
+# 
+data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_output"
+# 
+ModelRun = "Baseline_PMFA_NL"
+# 
+load(file = paste0(data_folder,"/",ModelRun,".RData"))  # (D)PMFA_inflow is read in
+
+SelectYear = 2019
+```
+
+
+Group data
+
+```{r dataprep1, eval=FALSE, include=FALSE}
+############################### inflows to long ################################
+
+# Be careful, this makes a very big tibble
+data_long <- 
+  DPMFA_inflow |> unnest(Mass_Polymer_kt, keep_empty = TRUE) |> 
+  pivot_longer(cols=-c(Type, Scale, Source, Polymer, To_Compartment, Material_Type, iD_source, RUN),
+               names_to = "Year",
+               values_to = "Mass_Polymer_kt")
+data_long |> distinct(Material_Type)
+###################### Dataframe manipulation for plots ########################
+
+Years_available <- unique(data_long$Year)
+
+# Create a dataframe for just 2019
+data_Year <- data_long |>
+  filter(Year == SelectYear) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt * 1000, .keep = "unused") |> # conert kt to ton
+  filter(To_Compartment %in% unique(DPMFA_sink$To_Compartment) & Type == "Inflow") |> # only sinks
+  mutate(`Environmental_compartment` = # make column indicating of this an air, water or soil sink.
+           case_when(
+             str_detect(To_Compartment, 'water') ~ "water",
+             str_detect(To_Compartment, 'air') ~ "air",
+             str_detect(To_Compartment, 'soil') ~ "soil",
+             .default = "none"
+           )) |> filter(`Environmental_compartment` != "none") |> # remove sinks that are not environmental
+  mutate(IenW_Source = # aggregate inputs to the Major sources classes the study focusses on
+           case_when(
+             str_detect(Source, 'Clothing') ~ "Textile",
+             str_detect(Source, 'Household textiles') ~ "Textile",
+             str_detect(Source, 'Technical textiles') ~ "Textile", 
+             str_detect(Source, 'Import of primary plastics') ~ "Pre-production pellets",
+             str_detect(Source, 'Domestic primary plastic production') ~ "Pre-production pellets",
+             .default = Source
+           )) 
+
+data_Year |> ungroup() |> 
+  group_by(Source,Scale,RUN) |>
+  summarise(totalout = sum(Mass_Polymer_t)) |> 
+  ungroup() |> group_by(Source,Scale) |> summarise(TotalSinks = mean(totalout))
+
+data_Year_sep_macro <- 
+  data_Year |> filter(Material_Type == "micro") |> full_join(
+    data_Year |> 
+      filter(Material_Type == "macro") |> 
+      ungroup() |> 
+      group_by(Type   ,
+               Scale,
+               Polymer,
+               To_Compartment,
+               Material_Type,
+               RUN,
+               Year,
+               Environmental_compartment) |> 
+      summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+                n=n(),
+                IenW_Source = "Macroplastic",
+                Source = "Macroplastic")
+  )
+
+```
+
+
+```{r Rec2Pel}
+############################# Prepare recycling data ###########################
+
+outflow_data <- 
+  DPMFA_outflow |> unnest(Mass_Polymer_kt, keep_empty = TRUE) |> 
+  pivot_longer(cols=-c(Type, Scale, Source, Polymer, From_compartment, To_compartment, iD_source, RUN),
+               names_to = "Year",
+               values_to = "Mass_Polymer_kt")
+
+# Create a dataframe for just 2019
+outflow_all_mat <- outflow_data |>
+  filter(Year == SelectYear) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt * 1000, .keep = "unused") |> # conert kt to ton
+  mutate(IenW_Source = # aggregate inputs to the Major sources classes the study focusses on
+           case_when(
+             str_detect(Source, 'Clothing') ~ "Textile",
+             str_detect(Source, 'Household textiles') ~ "Textile",
+             str_detect(Source, 'Technical textiles') ~ "Textile", 
+             str_detect(Source, 'Import of primary plastics') ~ "Pre-production pellets",
+             str_detect(Source, 'Domestic primary plastic production') ~ "Pre-production pellets",
+             .default = Source
+           ))
+
+# # Sum over polymers
+#  <- data_Year_outflow |>
+#   group_by(Type, Scale, IenW_Source, Source, Polymer, From_compartment, To_compartment, Year, RUN) |>
+#   summarise(Mass_Polymer_t = sum(Mass_Polymer_t))
+# Get other data, without the recycling data
+non_recycling_data <- outflow_all_mat |>
+  filter(!grepl("recycling", From_compartment)) 
+
+# Get the rows that contain recycling in the from compartment, all to compartments coming from recycling are sinks
+Recycling_data_subset <- outflow_all_mat |>
+  filter(grepl("recycling", From_compartment)) |>
+  mutate(IenW_Source = "Pre-production pellets")
+
+# Make a df where the recycling emissions are attributed to pre-production pellets
+#Recycling_data <- rbind(Recycling_data_grouped, non_recycling_data)
+
+Recycling_all <- rbind(Recycling_data_subset, non_recycling_data)
+rm("Recycling_data_subset")
+rm("non_recycling_data")
+rm("outflow_all_mat")
+rm("outflow_data")
+# Get only the sink compartments
+Recycling_all <- Recycling_all |>
+  filter(To_compartment %in% unique(DPMFA_sink$To_Compartment)) |>
+  mutate(`Environmental_compartment` = # make column indicating of this an air, water or soil sink.
+           case_when(
+             str_detect(To_compartment, 'water') ~ "water",
+             str_detect(To_compartment, 'air') ~ "air",
+             str_detect(To_compartment, 'soil') ~ "soil",
+             .default = "none"
+           )) |> filter(`Environmental_compartment` != "none") |> # remove sinks that are not environmental 
+  separate_wider_delim(cols = To_compartment,
+                       names = c("To_compartment", "Material_Type"),
+                       delim = " (",
+                       too_few = "align_start",
+                       too_many = "merge",
+                       cols_remove = FALSE) |> 
+  mutate(Material_Type = str_remove(Material_Type , "\\)")) |>
+  mutate(Material_Type = case_when(Material_Type %in% c('macro', 'micro') ~ as.character(Material_Type),
+                                   TRUE ~ NA_character_))
+# Recycling_all <- subset(Recycling_all, select = -From_compartment)
+
+# Make figure where macro data is separate from micro data
+pellets_macro_sep <- 
+  Recycling_all |> filter(Material_Type == "micro") |> full_join(
+    Recycling_all |> 
+      filter(Material_Type == "macro") |> 
+      ungroup() |> 
+      group_by(Type   ,
+               Scale,
+               To_compartment,
+               Material_Type,
+               Polymer,
+               RUN,
+               Year,
+               Environmental_compartment) |> 
+      summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+                n=n(),
+                IenW_Source = "Macroplastic",
+                Source = "Macroplastic")
+  )
+# rm("outflow_data")
+gc()
+
+```
+
+
+```{r initFig}
+# Define colors for groups source_colors["Macroplastic"]
+source_colors <- c(
+  "Agriculture" = "#F8766D",
+  "Clothing and home textiles" = "#E58700",
+  "Intentionally produced microparticles" = "#C99800",
+  "Macroplastic" = "#A3A500",
+  "Packaging" = "#619cff",
+  "Paint" = "#00BA38",
+  "Pre-production pellets" = "#00C0AF",
+  "Technical textiles" = "#00B0F6",
+  "Textile" = "#B983FF",
+  "Tyre wear" = "#ff67a4"
+)
+
+sink_colors <- c(
+  "water" = "dodgerblue4",
+  "air" = "slategray3",
+  "soil" = "darkgoldenrod"
+)
+
+# Create a theme for the plots
+plot_theme = theme(
+  axis.title.x = element_text(size = 16),
+  axis.text = element_text(size = 14), 
+  axis.title.y = element_text(size = 16),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(2, 4, 2, 2, "cm")
+  #panel.grid.major = element_line(colour = "grey",size=0.25)
+)
+
+plot_theme2 = theme(
+  axis.title.x = element_text(size = 14),
+  axis.text = element_text(size = 10), 
+  axis.title.y = element_text(size = 14),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(2, 4, 2, 2, "cm")
+)
+
+```
+
+
+```{r MicrMacro plastics plot 10}
+
+plot_data <-
+  pellets_macro_sep |> 
+  ungroup() |> 
+  group_by(Scale, IenW_Source, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+            countTest = n())
+
+all_emissions_plot <- ggplot(plot_data, aes(x = reorder(IenW_Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=IenW_Source)) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "Source", y = "Micro- & Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+all_emissions_plot
+
+# ggsave(paste0("/Figures/Plots/",ModelRun,"MicroMacroplastic_emissions_recycling_to_pellets_",format(Sys.time(),'%Y%m%d'),".png"),
+#        path = data_folder,
+#        width = 12, height = 6)
+```
+
+```{r plot compartment sinks 11-13, eval=FALSE, include=FALSE}
+Water_plastics <-
+  pellets_macro_sep |> filter(`Environmental_compartment` == "water") |> 
+  ungroup() |> 
+  group_by(Scale, IenW_Source, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |> 
+  filter(Mass_Polymer_t > 0.5) # remove any sources that contribute less than 500 kg per year (Agr. and Packaging)
+
+##### Compartment #####
+# Make a boxplot for microplastic emissions to water from each source
+micro_to_water_plot <- ggplot(Water_plastics, aes(x = reorder(IenW_Source, Mass_Polymer_t), y = Mass_Polymer_t)) +
+  geom_violin(fill = "skyblue", color = "dodgerblue4") +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "Source", y = "Estimated microplastic emissions to water (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+micro_to_water_plot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"_Water_plastics",format(Sys.time(),'%Y%m%d'),".png"),
+       path = data_folder, width = 12, height = 6)
+
+Air_plastics <-
+  pellets_macro_sep |> filter(`Environmental_compartment` == "air") |> 
+  ungroup() |> 
+  group_by(Scale, IenW_Source, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t))|> 
+  filter(Mass_Polymer_t > 0.5)
+
+# Make a boxplot for microplastic emissions to air from each source
+micro_to_air_plot <- ggplot(Air_plastics, aes(x = reorder(IenW_Source, Mass_Polymer_t), y = Mass_Polymer_t)) +
+  geom_violin(fill = "seashell3", color = "slategray4") +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "Source", y = "Estimated microplastic emissions to air (ton)") +                    # Adjust labels
+  coord_flip() + 
+  plot_theme
+micro_to_air_plot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"_Air_plastics",format(Sys.time(),'%Y%m%d'),".png"),
+       path = data_folder, width = 12, height = 6)
+
+Soil_plastics <-
+  pellets_macro_sep |> filter(`Environmental_compartment` == "soil") |> 
+  ungroup() |> 
+  group_by(Scale, IenW_Source, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t))
+
+# Make a boxplot for microplastic emissions to soil from each source
+micro_to_soil_plot <- ggplot(Soil_plastics, aes(x = reorder(IenW_Source, Mass_Polymer_t), y = Mass_Polymer_t)) +
+  geom_violin(fill = "burlywood1", color = "darkgoldenrod") +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "Source", y = "Estimated microplastic emissions to soil (ton)") +                    # Adjust labels
+  coord_flip() + 
+  plot_theme
+micro_to_soil_plot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"_soil_plastics",format(Sys.time(),'%Y%m%d'),".png"),
+       path = data_folder, width = 12, height = 6)  
+
+```
+
+```{r soilairwater}
+
+barplot_data <-
+  pellets_macro_sep |> 
+  ungroup() |> 
+  group_by(Scale, Source, IenW_Source, To_compartment, Environmental_compartment, Year, Type, Material_Type, Polymer) |> 
+  summarise(Mass_Polymer_t = mean(Mass_Polymer_t),
+            n = n()) |> 
+  ungroup() |> 
+  group_by(Scale, IenW_Source, Environmental_compartment, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+            n= n())
+
+# Make a stacked barplot for what percentage goes to air, soil and water
+sink_dist_barplot <- ggplot(barplot_data, aes(fill = Environmental_compartment, x = IenW_Source, y = Mass_Polymer_t)) +
+  geom_bar(position = "fill", stat="identity", color = "transparent") +
+  scale_fill_manual(values = sink_colors) +
+  scale_x_discrete(labels = wrap_format(10)) +                   # Wraps text longer than 10 characters
+  scale_y_continuous(labels = scales::percent)+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(y= "Distribution",
+       x="") +
+  labs(fill='Compartment')+
+  plot_theme 
+sink_dist_barplot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"Sinks_barplot",format(Sys.time(),'%Y%m%d'),".png"),
+       path = data_folder, width = 8, height = 5)
+
+```
+
+
+```{r pre-production pellets}
+
+pellet_data <- pellets_macro_sep |>
+  filter(IenW_Source == "Pre-production pellets") |>
+  filter(Mass_Polymer_t != 0) |> 
+  mutate(From_compartment = #are names from compartments for clarity in plot
+           case_when(
+             str_detect(From_compartment, 'Industrial stormwater') ~ "Industrial plants",
+             str_detect(From_compartment, 'Combined sewer overflow') ~ "Industrial plants", 
+             str_detect(From_compartment, 'Transport of primary plastics') ~ "Transport sea",
+             str_detect(From_compartment, 'Agricultural plastic recycling') ~ "Recycling",
+             str_detect(From_compartment, 'Packaging recycling') ~ "Recycling",
+             str_detect(From_compartment, 'Textile recycling') ~ "Recycling",
+             str_detect(From_compartment, 'Pellet losses transport land') ~ "Transport land",
+             str_detect(From_compartment, 'Pellet losses industrial plants') ~ "Industrial plants",
+             .default = From_compartment
+           ))|> 
+  ungroup() |> 
+  group_by(From_compartment,RUN,Scale,Material_Type,Year, IenW_Source) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+            count = n()) |> ungroup() 
+
+pellet_plot <- ggplot(pellet_data, aes(x = reorder(From_compartment, Mass_Polymer_t), y = Mass_Polymer_t)) +
+  geom_violin(fill = "#00C0AF") +
+  theme(legend.position = "none") +
+  scale_y_log10(labels = scales::number_format())+
+  # scale_y_continuous(
+  #   trans = "log10",
+  #   breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+  #   labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  #) +             # Log-transform y-axis
+  labs(x = "", y = "Microplastic emissions (ton)") +
+  coord_flip()+
+  plot_theme
+
+pellet_plot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"Pellet_emissions_per_source",format(Sys.time(),'%Y%m%d'),".png"),
+       path = data_folder,
+       width = 8, height = 5) 
+
+```
+
+
+```{r polymers microplastics}
+
+Polymer_plastics <-
+  pellets_macro_sep |> 
+  filter(Material_Type == "micro") |> 
+  ungroup() |> 
+  group_by(Scale, Polymer, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+            countTest = n()) 
+
+all_emissions_plot <- ggplot(Polymer_plastics, aes(x = reorder(Polymer, Mass_Polymer_t), y = Mass_Polymer_t, fill=Polymer)) +
+  geom_violin() +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "Polymer", y = "Total microplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+all_emissions_plot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"total_polymer_emissions_",SelectYear,".png"),
+       path = data_folder,
+       width = 12, height = 6)
+
+
+```
+
+
+```{r macroplastics}
+
+Macroplastics <-
+  Recycling_all |> 
+  filter(Material_Type == "macro") |> 
+  ungroup() |> 
+  group_by(Scale, Polymer, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+            countTest = n()) 
+
+
+
+macrop_plot <- ggplot(Macroplastics, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t)) +
+  geom_violin(fill = source_colors["Macroplastic"]) +
+  theme(legend.position = "none") +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "Source", y = "Microplastic emissions (ton)") +
+  coord_flip()+
+  plot_theme
+
+macrop_plot
+
+
+plot_data <-
+  Recycling_all |> 
+  filter(Material_Type == "macro") |> 
+  ungroup() |> 
+  group_by(Scale, IenW_Source, RUN, Year, Type) |> 
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
+            countTest = n())|> 
+  filter(Mass_Polymer_t > 10) # now filtered because paint is not a macroplastic (needs fix in MFA-TC's)
+
+macrop_plot <- ggplot(plot_data, aes(x = reorder(IenW_Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=source_colors["Macroplastic"])) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+macrop_plot
+
+ggsave(paste0("/Figures/Plots/",ModelRun,"Sources_to_macroplastic_emissions_",SelectYear,".png"),
+       path = data_folder,
+       width = 8, height = 4)
+
+
+```
+
+```{r textile}
+
+
+
+
+
+
+
+``` 

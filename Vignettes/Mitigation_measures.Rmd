@@ -1,0 +1,337 @@
+---
+title: "Mitigation measures"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(writexl)
+library(readxl)
+```
+
+The DPMFA model needs to be run using different setup files in order to get output for a baseline and all the different scenario's that include mitigation measures we want to study. Those output data should then be combined into 1 dataframe which is further analysed here
+
+```{r data using mean}
+
+# MIT_data_combined |> distinct(Measure) |> print(n=25)
+data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_output"
+load(paste0(data_folder,"/Mitigation_data_combined_v1_20240526.Rdata"))
+
+MIT_data_combined <- 
+  MIT_data_combined |> 
+  filter(!is.na(Measure)) # only neede because Mitigation measure 2 file had domestic and import pellets
+
+MIT_data_combS <-
+  MIT_data_combined |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Material_Type,
+           Year,
+           Source,
+           MIT_Source,
+           Measure) |> 
+  summarise(Measure_t = sum(Mean_mass_t)) |> 
+  ungroup()
+
+
+
+# MIT_data_combined |> group_by_all() |> 
+#   filter(n()>1) |> ungroup() # able to check for duplicate rows
+
+Baseline1 <- 
+  MIT_data_combS |> 
+  filter(Measure == 0) |> 
+  mutate(BaselinePerSMITCombo_t = Measure_t, .keep = "unused" ) |> 
+  select(-Measure)
+
+
+Baseline2 <- 
+  Baseline1 |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Material_Type,
+           MIT_Source,
+           Year) |> 
+  summarise(BaselinePerSMITCombo_t = sum(BaselinePerSMITCombo_t)) |> 
+  filter(Material_Type != "macro") |> 
+  bind_rows(
+    Baseline1 |>
+      filter(Material_Type == "macro") |> 
+      ungroup() |> 
+      group_by(Year,Scale,Type, Material_Type) |> 
+      summarise(BaselinePerSMITCombo_t = sum(BaselinePerSMITCombo_t),
+                MIT_Source         = "Macropalstics"))
+
+Baseline3 <-
+  Baseline1 |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Material_Type,
+           Year) |> 
+  summarise(BaselineTotMicroMacro_t = sum(BaselinePerSMITCombo_t))
+
+
+Baseline <- 
+  Baseline1 |> 
+  left_join(Baseline2) |>
+  left_join(Baseline3)
+
+MIT_data_combS <-
+  MIT_data_combS |> 
+  filter(Measure != 0) |> 
+  left_join(Baseline, by = c(
+    "Type",
+    "Scale",
+    "Material_Type",            
+    "Year",
+    "MIT_Source",
+    "Source"
+  ))
+
+
+MIT_data_combS2 <- 
+  MIT_data_combS |> 
+  mutate(Reduction_t = BaselinePerSMITCombo_t-Measure_t)
+
+# Load the combinations
+data_folder2 <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_output/Mitigation_data/"
+msd <- read_excel(path = paste0(data_folder2, "Measure_descriptions.xlsx")) |> 
+  filter(Measure != "Baseline") |> 
+  mutate_at(c("Measure","GenRed"),as.numeric)
+
+
+
+MeasureReduction <- # get the reduction summed per measure for comparison with total plastics emitted
+  MIT_data_combS2 |> 
+  left_join(msd, by = "Measure") |> 
+  ungroup() |> 
+  group_by(Measure,
+           Material_Type ,
+           Year,
+           GenRed,
+           Description) |> 
+  summarise(ReductionMtot_t = sum(Reduction_t)) |> 
+  full_join(Baseline3) |> 
+  mutate(Effectifity = ((ReductionMtot_t)/BaselineTotMicroMacro_t)/GenRed,
+         FracReduc = ((ReductionMtot_t)/BaselineTotMicroMacro_t))
+
+
+
+MeasureMITComboReduction <- # get the reduction summed per measure for comparison with total plastics emitted
+  MIT_data_combS2 |> 
+  left_join(msd, by = "Measure") |> 
+  ungroup() |> 
+  group_by(Measure,
+           RelevantSource,
+           Material_Type ,
+           Year,
+           GenRed,
+           Description) |> 
+  summarise(ReductionMMIT_t = sum(Reduction_t)) |> 
+  filter(Material_Type != "macro") |> 
+  bind_rows(
+    MIT_data_combS2 |>
+      left_join(msd, by = "Measure") |> 
+      filter(Material_Type == "macro") |> 
+      ungroup() |> 
+      group_by(Year, RelevantSource,Measure,
+               GenRed,Description, Material_Type) |> 
+      summarise(ReductionMMIT_t = sum(Reduction_t),
+                RelevantSource         = "Macropalstics") ) |> 
+  left_join(Baseline2 |> ungroup() |> 
+              mutate(RelevantSource = MIT_Source) |> 
+              select(-MIT_Source)) |> 
+  mutate(Effectifity = (BaselinePerSMITCombo_t /BaselinePerSMITCombo_t )/GenRed,
+         FracReduc = (BaselinePerSMITCombo_t /BaselinePerSMITCombo_t ))
+
+
+write.xlsx(list(MeasureMITComboReduction, MeasureReduction),                     
+           file = paste0(data_folder,"/Output_tables/Mitigation_Measure_effect.xlsx"))
+
+
+```
+
+
+```{r data using p50}
+
+# MIT_data_combined |> distinct(Measure) |> print(n=25)
+# data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_output"
+# load(paste0(data_folder,"/Mitigation_data_combined_v1_20240526.Rdata"))
+
+MIT_data_combined<- MIT_data_combined_p50
+
+MIT_data_combined <- 
+  MIT_data_combined |> 
+  filter(!is.na(Measure)) # only neede because Mitigation measure 2 file had domestic and import pellets
+
+MIT_data_combS <-
+  MIT_data_combined |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Material_Type,
+           Year,
+           Source,
+           MIT_Source,
+           Measure) |> 
+  summarise(Measure_t = sum(P50_mass_t)) |> 
+  ungroup()
+
+
+
+# MIT_data_combined |> group_by_all() |> 
+#   filter(n()>1) |> ungroup() # able to check for duplicate rows
+
+Baseline1 <- 
+  MIT_data_combS |> 
+  filter(Measure == 0) |> 
+  mutate(BaselinePerSMITCombo_t = Measure_t, .keep = "unused" ) |> 
+  select(-Measure)
+
+
+Baseline2 <- 
+  Baseline1 |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Material_Type,
+           MIT_Source,
+           Year) |> 
+  summarise(BaselinePerSMITCombo_t = sum(BaselinePerSMITCombo_t)) |> 
+  filter(Material_Type != "macro") |> 
+  bind_rows(
+    Baseline1 |>
+      filter(Material_Type == "macro") |> 
+      ungroup() |> 
+      group_by(Year,Scale,Type, Material_Type) |> 
+      summarise(BaselinePerSMITCombo_t = sum(BaselinePerSMITCombo_t),
+                MIT_Source         = "Macropalstics"))
+
+Baseline3 <-
+  Baseline1 |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Material_Type,
+           Year) |> 
+  summarise(BaselineTotMicroMacro_t = sum(BaselinePerSMITCombo_t))
+
+Baseline4 <-
+  Baseline1 |> 
+  ungroup() |> 
+  group_by(Type,
+           Scale,
+           Year) |> 
+  summarise(BaselineTot_t = sum(BaselinePerSMITCombo_t))
+
+Baseline <- 
+  Baseline1 |> 
+  left_join(Baseline2) |>
+  left_join(Baseline3) |> 
+  left_join(Baseline4)
+
+MIT_data_combS <-
+  MIT_data_combS |> 
+  filter(Measure != 0) |> 
+  left_join(Baseline, by = c(
+    "Type",
+    "Scale",
+    "Material_Type",            
+    "Year",
+    "MIT_Source",
+    "Source"
+  ))
+
+
+MIT_data_combS2 <- 
+  MIT_data_combS |> 
+  mutate(Reduction_t = BaselinePerSMITCombo_t-Measure_t)
+
+# Load the combinations
+data_folder2 <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_output/Mitigation_data/"
+msd <- read_excel(path = paste0(data_folder2, "Measure_descriptions.xlsx")) |> 
+  filter(Measure != "Baseline") |> 
+  mutate_at(c("Measure","GenRed"),as.numeric)
+
+
+
+MeasureReductionMM <- # get the reduction summed per measure for comparison with total plastics emitted
+  MIT_data_combS2 |> 
+  left_join(msd, by = "Measure") |> 
+  ungroup() |> 
+  group_by(Measure,
+           Material_Type ,
+           Year,
+           GenRed,
+           Description) |> 
+  summarise(ReductionMtot_t = sum(Reduction_t)) |> 
+  full_join(Baseline3) |> 
+  full_join(Baseline4) |> 
+  mutate(EffectifityMM = ((ReductionMtot_t)/BaselineTotMicroMacro_t)/GenRed,
+         FracReducMM = ((ReductionMtot_t)/BaselineTotMicroMacro_t))
+
+
+MeasureReductionTot <- # get the reduction summed per measure for comparison with total plastics emitted
+  MIT_data_combS2 |> 
+  left_join(msd, by = "Measure") |> 
+  ungroup() |> 
+  group_by(Measure,
+           Year,
+           GenRed,
+           Description) |> 
+  summarise(ReductionMtot_t = sum(Reduction_t)) |> 
+  # full_join(Baseline3) |> 
+  full_join(Baseline4) |> 
+  mutate(EffectifityMM = ((ReductionMtot_t)/BaselineTot_t)/GenRed,
+         FracReducTot = ((ReductionMtot_t)/BaselineTot_t))
+
+
+MeasureMITComboReduction <- # get the reduction summed per measure for comparison with total plastics emitted
+  MIT_data_combS2 |> 
+  left_join(msd, by = "Measure") |> 
+  ungroup() |> 
+  group_by(Measure,
+           RelevantSource,
+           Material_Type ,
+           Year,
+           GenRed,
+           Description) |> 
+  summarise(ReductionMMIT_t = sum(Reduction_t)) |> 
+  filter(Material_Type != "macro") |> 
+  bind_rows(
+    MIT_data_combS2 |>
+      left_join(msd, by = "Measure") |> 
+      filter(Material_Type == "macro") |> 
+      ungroup() |> 
+      group_by(Year, RelevantSource,Measure,
+               GenRed,Description, Material_Type) |> 
+      summarise(ReductionMMIT_t = sum(Reduction_t),
+                RelevantSource         = "Macropalstics") ) |> 
+  left_join(Baseline2 |> ungroup() |> 
+              mutate(RelevantSource = MIT_Source) |> 
+              select(-MIT_Source)) |> 
+  mutate(Effectifity = (ReductionMMIT_t /BaselinePerSMITCombo_t )/GenRed,
+         FracReduc = (ReductionMMIT_t /BaselinePerSMITCombo_t ))
+
+
+write.xlsx(list(MeasureMITComboReduction, MeasureReductionMM,MeasureReductionTot),
+           file = paste0(data_folder,"/Output_tables/Mitigation_Measure_effect_p50.xlsx"))
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
