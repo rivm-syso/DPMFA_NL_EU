@@ -7,15 +7,14 @@ only global variables (name of database, name/location of folder) are added
 
 Original: 
 Created on 09.04.2020
-@author: dew
-Test model for importing SQL databases
+@author: Delphine Kawecki
 
 """
 
 import os
 
-# Change to the working directory on your computer
-os.chdir("N:/Documents/GitHub_opgeschoond")
+# Set working directory to where the scripts are located
+os.chdir("N:/Documents/My_folder")
 
 import config
 import csv
@@ -68,7 +67,7 @@ model = su.setupModel(pathtoDB,modelname,RUNS,mat, startYear, endYear)
 #model.debugModel()
 
 # set up the simulator object    
-simulator = sc.Simulator(RUNS, Tperiods, seed, True, True) # 2250 is just a seed
+simulator = sc.Simulator(RUNS, Tperiods, seed, True, True)
 # define what model  needs to be run
 simulator.setModel(model)
 simulator.runSimulation()

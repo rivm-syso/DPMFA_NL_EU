@@ -8,9 +8,9 @@ Created on Mon May 15 09:30:27 2023
 # Input file
 inputfile = "MainInputFile.xlsx"
 
-# Select operating system for folder structures 
+# Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
-OS_env = 'lin' 
+#OS_env = 'lin' 
 
 # Select the model type: dpmfa or pmfa
 model_type = 'pmfa'

@@ -8,8 +8,9 @@ Created on Mon May 15 09:36:29 2023
 import os
 import sys
 
-os.chdir("N:/Documents/GitHub_opgeschoond")
-mainfolder = os.getcwd() # Set folder to where the script is
+# Set working directory to where the scripts are located
+mainfolder = os.getcwd() 
+os.chdir("N:/Documents/My_folder") 
 
 if os.path.isfile('main.py') == False:
     sys.exit("Main folder setting is not correct. Script stopped, please try again from the correct folder.")

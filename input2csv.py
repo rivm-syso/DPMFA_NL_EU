@@ -8,6 +8,9 @@ import pandas as pd
 import numpy as np
 import os
 import config
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 # Fetch configurations from the config.py file
 nodatayear  = config.nodatayear

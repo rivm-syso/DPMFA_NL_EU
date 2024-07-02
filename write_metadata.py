@@ -7,9 +7,8 @@ Created on Tue Mar 12 08:02:07 2024
 
 import os
 
-# Change to the working directory on your computer
-os.chdir("N:/Documents/GitHub_opgeschoond")
-
+# Set working directory to where the scripts are located
+os.chdir("N:/Documents/My_folder")
 import config
 import datetime
 
@@ -21,8 +20,15 @@ if config.OS_env == 'win':
 else:
     mdfilename = "/output/metadata.txt" 
 
-if os.path.isfile(mdfilename) == True:
-    os.remove(mdfilename)
+# Ensure the output directory exists
+os.makedirs(os.path.dirname(mdfilename), exist_ok=True)
+
+# Delete the file if it already exists
+if os.path.isfile(mdfilename):
+    try:
+        os.remove(mdfilename)
+    except OSError as e:
+        print(f"Error: {e.strerror} - {e.filename}")
 
 # Create a new file
 f = open(mdfilename, "x")
