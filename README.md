@@ -1,6 +1,8 @@
 README
 ================
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12636554.svg)](https://doi.org/10.5281/zenodo.12636554)
+
 Dynamic probabilistic material flow analysis (DPMFA) model for the
 Netherlands and the EU. Based on code by EMPA and data in collaboration
 with TNO.
