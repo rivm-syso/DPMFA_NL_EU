@@ -3,6 +3,7 @@ Dynamic probabilistic material flow analyisis (DPMFA) model for the Netherlands
 and the EU. Based on code by EMPA and data in collaboration with TNO.
 
 Author: Institute of Public Health and the Environment (RIVM)
+https://doi.org/10.5281/zenodo.12636554
 
 -------------------------------------------------------------------------------
 Dependencies: 
