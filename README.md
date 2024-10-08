@@ -18,15 +18,10 @@ using Monte Carlo simulations.
 ## Dependencies
 
 - Python (version 3.11.7)
-
 - Numpy (version 1.26.4)
-
 - Pandas (version 2.4.1)
-
 - dpmfa (version 1.1)
-
 - sqlite (version 3.41.2)
-
 - Anaconda (needed to create and run batch files)
 
 ## How to run the model
