@@ -62,6 +62,8 @@ f.write("Seed: " + str(config.seed))
 f.write("\n")
 f.write("Maininputfile version: " + str(config.inputfile))
 f.write("\n")
+f.write("forSimpleBox: " + str(config.forSimpleBox))
+f.write("\n")
 f.write("\n")
 f.write("End")
 

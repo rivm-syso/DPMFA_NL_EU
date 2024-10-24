@@ -29,7 +29,7 @@ endyear = 2020
 
 #  Running variables
 Speriod = 3 # special period for detailed output printing
-RUNS = 100 # number of runs 
+RUNS = 10 # number of runs 
 seed = 2250 
 nodatayear  = 1950 # year for which no data is available, needed for interpolation (has to be the same or smaller than startyear)
 

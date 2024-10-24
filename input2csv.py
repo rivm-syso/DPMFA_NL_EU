@@ -338,17 +338,51 @@ def project_input(inputsheetname):
     
     return(input_)
 
+allyears = pd.DataFrame({'year': range(nodatayear, endyear+1)})
+
 # If toSimpleBox == True and the region is EU, subtract the input values for NL from the EU input values
-if toSimpleBox == True & reg == "EU":
+if toSimpleBox == True and reg == "EU":
     input_NL = project_input("Input_NL")
     input_EU = project_input("Input_EU")
     
-    joined_inputs = pd.merge(input_EU, input_NL, on=['comp', 'year', 'mat'], how='outer')
+    joined_inputs = pd.merge(input_EU, input_NL, on=['comp', 'year', 'mat'], how='outer', suffixes=('_EU', '_NL'))
     
-    allyears = pd.DataFrame({'year': range(nodatayear, endyear+1)})
-else:
-    input_ = project_input(sheetname)
-    allyears = pd.DataFrame({'year': range(nodatayear, endyear+1)})
+    # Because of the sorting and the outer join, rows are already matched correctly, except for when NL and EU both have 2 entries, resulting in 4 rows per combination
+    count_combinations = joined_inputs.groupby(['year', 'comp', 'mat']).size().reset_index(name='count')
+    count_is_4 = count_combinations[count_combinations['count'] == 4][['year', 'mat', 'comp']] 
+    
+    count_under_4 = joined_inputs.merge(count_is_4, how='outer', indicator=True)
+    count_under_4 = count_under_4[(count_under_4._merge=='left_only')].drop('_merge', axis=1)
+    
+    count_is_4_result = pd.DataFrame()
+    
+    for i in range(len(count_is_4)):
+        row_i = count_is_4.iloc[[i]]
+        where_count_is_4 = joined_inputs.merge(row_i, on=['comp', 'year', 'mat'], how ='inner')
+        unique_indices = where_count_is_4['id_EU'].unique()
+        
+        max_EU = where_count_is_4['value_EU'].max()
+        min_EU = where_count_is_4['value_EU'].min()
+        max_NL = where_count_is_4['value_NL'].max()
+        min_NL = where_count_is_4['value_NL'].min()
+        
+        # Select the row where EU value is high and where NL value is high, do the same for low
+        highest_row = where_count_is_4[(where_count_is_4['value_EU'] == max_EU) & (where_count_is_4['value_NL'] == max_NL)]
+        lowest_row = where_count_is_4[(where_count_is_4['value_EU'] == min_EU) & (where_count_is_4['value_NL'] == min_NL)]
+
+        count_is_4_result = pd.concat([count_is_4_result, highest_row, lowest_row])
+        
+    input_ = pd.concat([count_under_4, count_is_4_result])
+    input_['value'] = input_['value_EU'] - input_['value_NL']
+    input_ = input_[[ 'comp', 'year', 'mat', 'value', 'dqisgeo_EU', 'dqistemp_EU', 'dqismat_EU', 'dqistech_EU', 'dqisrel_EU', 'source_EU']]
+    input_ = input_.rename(columns={'dqisgeo_EU': 'dqisgeo', 'dqistemp_EU': 'dqistemp', 'dqismat_EU':'dqismat','dqistech_EU': 'dqistech', 'dqisrel_EU': 'dqisrel', 'source_EU':'source'})
+    input_['id'] = range(len(input_))
+    
+elif reg == "NL":
+    input_ = project_input("Input_NL")
+    
+elif reg == "EU":
+    input_ = project_input("Input_EU")
 
 print('Input to csv done.. \n')
 
