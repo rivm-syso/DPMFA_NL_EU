@@ -10,7 +10,7 @@ import sys
 
 # Set working directory to where the scripts are located
 mainfolder = os.getcwd() 
-os.chdir("N:/Documents/My_folder") 
+os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
 
 if os.path.isfile('main.py') == False:
     sys.exit("Main folder setting is not correct. Script stopped, please try again from the correct folder.")

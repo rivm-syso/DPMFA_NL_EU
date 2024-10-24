@@ -17,8 +17,11 @@ model_type = 'pmfa'
 #model_type = 'dpmfa'
 
 # Selection of regions
-reg = 'NL'
-#reg = 'EU'
+#reg = 'NL'
+reg = 'EU'
+
+# Specify if the resulting emissions will be used in SimpleBox
+toSimplebox = True
 
 # Select startyear and endyear 
 startyear = 2019
