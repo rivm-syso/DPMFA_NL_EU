@@ -1,0 +1,6 @@
+
+*.pyc
+input/
+output/
+CaseStudy_Runner_*
+
