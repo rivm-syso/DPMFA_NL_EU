@@ -126,12 +126,6 @@ projections = projections.rename(columns = col)
 # The data that is read from the excel sheet is modified to match the format
 # used in the example csvs provided by Kawecki et al. 
 
-# Select region (NL or EU):
-if reg == 'NL':
-    sheetname = "Input_NL"
-else:
-    sheetname = "Input_EU"
-
 def project_input(inputsheetname):
     
     input_ = pd.read_excel(file, sheet_name = inputsheetname)
@@ -334,7 +328,7 @@ def project_input(inputsheetname):
     
     # Select only the years from startyear to endyear
     input_ = input_[(input_['year'] >= startyear) & (input_['year'] <= endyear)]
-    input_ = input_[(input_['value'] != 0)]
+    #input_ = input_[(input_['value'] != 0)]
     
     return(input_)
 
