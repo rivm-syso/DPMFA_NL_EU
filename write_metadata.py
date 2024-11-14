@@ -8,7 +8,7 @@ Created on Tue Mar 12 08:02:07 2024
 import os
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+os.chdir("N:/Documents/MyFolder")
 import config
 import datetime
 

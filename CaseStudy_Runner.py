@@ -14,7 +14,7 @@ Created on 09.04.2020
 import os
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+os.chdir("N:/Documents/MyFolder")
 
 import config
 import csv
