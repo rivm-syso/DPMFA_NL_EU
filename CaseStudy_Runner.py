@@ -31,8 +31,8 @@ Speriod = config.Speriod
 RUNS = config.RUNS
 seed = config.seed
 reg = config.reg
-mat = "Acryl"
-sel = "Paint"
+mat = "RUBBER"
+sel = "Tyre wear"
 mainfolder = os.getcwd()
 
 # Steps to find or create folders  
@@ -106,7 +106,7 @@ for Speriod in range(Tperiods):
         print('Flows from ' + Comp.name +':' )
         # in this case name is the key, value is the matrix(data), in this case .items is needed
         for Target_name, value in Comp.outflowRecord.items():
-            print(' --> ' + str(Target_name)+ ': Mean = '+str(round(np.mean(value[:,Speriod]*1000),0))+' ± '+str(round(np.std(value[:,Speriod]*1000),0))   )
+            print(' --> ' + str(Target_name)+ ': Mean = '+str(round(np.mean(value[:,Speriod]),0))+' ± '+str(round(np.std(value[:,Speriod]),0)) + ' kiloton'  )
             print('')
 print('-----------------------')
 
