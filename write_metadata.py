@@ -8,7 +8,7 @@ Created on Tue Mar 12 08:02:07 2024
 import os
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/My_folder")
+os.chdir("N:/Documents/MyFolder")
 import config
 import datetime
 
@@ -61,6 +61,8 @@ f.write("\n")
 f.write("Seed: " + str(config.seed))
 f.write("\n")
 f.write("Maininputfile version: " + str(config.inputfile))
+f.write("\n")
+f.write("NL_nested: " + str(config.NL_nested))
 f.write("\n")
 f.write("\n")
 f.write("End")
