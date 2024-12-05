@@ -1,8 +1,0 @@
-cff-version: 1.1.0
-message: "If you use this software, please cite it as below."
-title: 'PMFA and DPMFA model for micro and macroplastics at NL and EU scales'
-type: software
-authors:
-- family-names: Hids
-  given-names: Anne
-  orcid: 0009-0006-0325-5924
