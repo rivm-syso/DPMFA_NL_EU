@@ -21,6 +21,8 @@ authors:
   family-names: van Bruggen
   given-names: Anne
   orcid: 0000-0003-0621-714X
+license: "cc-by-nc-sa"
+type: software
 title: "DPMFA_NL_EU"
 doi: 10.5281/zenodo.12636553
 url: "https://github.com/rivm-syso/DPMFA_NL_EU"
