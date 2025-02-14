@@ -217,8 +217,23 @@ polymer_plastics_air <-
   group_by(Scale, Polymer, RUN, Year, Type, To_Compartment) |> 
   summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
             countTest = n())  
+summary_table <- 
+  polymer_plastics_air |> 
+  ungroup() |> 
+  group_by(Scale, Polymer)|> 
+  summarise(#countTest = n(),
+    Avg_Mass_t = mean(Mass_Polymer_t),
+    SD_Mass_t = sd(Mass_Polymer_t),
+    min_Mass_t = min(Mass_Polymer_t),
+    p5_Mass_t = quantile(Mass_Polymer_t,probs = 0.05),
+    p50_Mass_t = quantile(Mass_Polymer_t,probs = 0.5),
+    p95_Mass_t = quantile(Mass_Polymer_t,probs = 0.95),
+    max_Mass_t = max(Mass_Polymer_t)) |> 
+  mutate(Avg_fraction = Avg_Mass_t/sum(Avg_Mass_t),
+         p50_fraction = p50_Mass_t/sum(p50_Mass_t))
 
 
+write.xlsx(summary_table, paste0(data_folder,"/Output_tables/" ,ModelRun,"/",format(Sys.time(),'%Y%m%d'),"_polymer_emissions_air_",SelectYear, ".xlsx"))
 # Source_emissions_plot <- ggplot(Source_polymer_plastics_air, aes(x = reorder(yfactor, Mass_Polymer_t), y = Mass_Polymer_t, fill=Polymer)) +
 #   geom_violin() +
 #   theme(legend.position="none")+
