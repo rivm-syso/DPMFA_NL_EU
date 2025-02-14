@@ -204,7 +204,7 @@ sink_colors <- c(
 
 #### Make figure
 
-Source_polymer_plastics_air <-
+polymer_plastics_air <-
   data_Year_sep_macro |> 
   mutate(Source = case_when(
     Source == "Technical textiles" ~ "Textile",
@@ -214,32 +214,33 @@ Source_polymer_plastics_air <-
   )) |>
   filter(To_Compartment == "Outdoor air (micro)") |>
   ungroup() |> 
-  group_by(Scale, Polymer, Source, RUN, Year, Type, To_Compartment) |> 
+  group_by(Scale, Polymer, RUN, Year, Type, To_Compartment) |> 
   summarise(Mass_Polymer_t = sum(Mass_Polymer_t),
-            countTest = n()) |> mutate(yfactor = paste(Source,Polymer,sep=".")) 
+            countTest = n())  
 
 
-Source_emissions_plot <- ggplot(Source_polymer_plastics_air, aes(x = reorder(yfactor, Mass_Polymer_t), y = Mass_Polymer_t, fill=Polymer)) +
-  geom_violin() +
-  theme(legend.position="none")+
-  scale_y_log10(labels = scales::number_format())+
-  geom_text(aes(y=0.001, label = Polymer), vjust = "left")+
-  labs(x = "Polymer", y = "Total plastic emissions (ton)") +                   # Adjust labels
-  coord_flip() +
-  plot_theme +
-  
-  facet_grid(vars(reorder(Source, -Mass_Polymer_t)),vars(),space = "free",scales="free")+
-  theme(strip.text.y = element_text(angle = 0),
-        panel.grid.major.x = element_line(colour = "black"),
-        panel.grid.minor.x = element_line(colour = "grey",
-                                          linetype = 1),
-        panel.grid.major.y = element_line(colour = "grey",
-                                          linetype = 2),
-        axis.text.y=element_blank(),axis.ticks.y=element_blank()) +
-  ggtitle("Emissions to outdoor air (micro)")
+# Source_emissions_plot <- ggplot(Source_polymer_plastics_air, aes(x = reorder(yfactor, Mass_Polymer_t), y = Mass_Polymer_t, fill=Polymer)) +
+#   geom_violin() +
+#   theme(legend.position="none")+
+#   scale_y_log10(labels = scales::number_format())+
+#   geom_text(aes(y=0.001, label = Polymer), vjust = "left")+
+#   labs(x = "Polymer", y = "Total plastic emissions (ton)") +                   # Adjust labels
+#   coord_flip() +
+#   plot_theme +
+#   
+#   facet_grid(vars(reorder(Source, -Mass_Polymer_t)),vars(),space = "free",scales="free")+
+#   theme(strip.text.y = element_text(angle = 0),
+#         panel.grid.major.x = element_line(colour = "black"),
+#         panel.grid.minor.x = element_line(colour = "grey",
+#                                           linetype = 1),
+#         panel.grid.major.y = element_line(colour = "grey",
+#                                           linetype = 2),
+#         axis.text.y=element_blank(),axis.ticks.y=element_blank()) +
+#   ggtitle("Emissions to outdoor air (micro)")
+# 
+# print(Source_emissions_plot)
+source("~/R_Projects/DPMFA_NL_EU/R/CaseStudies/Report_106-2024/Figuur_Polymeer_lucht_PMFA.R", echo=TRUE)
 
-print(Source_emissions_plot)
-
-ggsave(paste0("/Figures/Plots/",ModelRun,"source_polymer_emissions_air_",SelectYear,format(Sys.time(),'%Y%m%d'),".png"),
-       path = data_folder,
-       width = 15, height = 10)
+ggsave(paste0("/Figures/",ModelRun,"/",format(Sys.time(),'%Y%m%d'),"_polymer_emissions_air_",SelectYear,".png"),
+       plot = Figuur_1,
+       path = data_folder)
