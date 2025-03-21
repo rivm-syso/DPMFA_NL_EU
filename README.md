@@ -15,7 +15,7 @@ This model is used to calculate micro- and macroplastic emissions for
 certain product groups and polymers to the environment. The input needed
 to run the model is present in MainInputfile.xlsx. The plastic emissions
 to environmental sinks are calculated over time and probabilistically by
-using Monte Carlo simulations.
+using Monte Carlo simulations. For more information see: https://doi.org/10.21945/RIVM-2024-0106.
 
 ## Dependencies
 
