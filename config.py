@@ -6,7 +6,7 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFileTextileExportTEST.xlsx"
+inputfile = "MainInputFile_25_11_2024_new_test_2.xlsx"
 
 # Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
@@ -17,8 +17,8 @@ OS_env = 'win'
 model_type = 'dpmfa'
 
 # Selection of regions
-reg = 'NL'
-#reg = 'EU'
+#reg = 'NL'
+reg = 'EU'
 
 # When this variable is True and reg = 'EU', NL input will be subtracted from EU input.  
 NL_nested = False
@@ -34,7 +34,7 @@ seed = 2250
 nodatayear  = 1950 # year for which no data is available, needed for interpolation (has to be smaller than startyear)
 
 # List of input categories 
-sellist = ['Intentionally produced microparticles', 'Clothing (product sector)', 
+sellist = ['Intentionally produced microparticles', 'Clothing', 
             'Household textiles (product sector)', 'Technical textiles', 'Paint', 
             'Domestic primary plastic production', 'Import of primary plastics', 
             'Agriculture', 'Packaging', 'Tyre wear']

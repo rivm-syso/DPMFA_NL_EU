@@ -187,7 +187,7 @@ for sel in sellist:
          
     # Change working directory to selfolder  
     os.chdir(selfolder) 
-        
+    
     # Create a path for the copied db file
     db_name = reg + "_" + sel + ".db"
     pathtoDB = os.path.abspath(db_name)
@@ -203,8 +203,32 @@ for sel in sellist:
     connection = sqlite3.connect(pathtoDB)
     cursor = connection.cursor()
     
-    # Select selection sel[i] from the database
-    cursor.execute("SELECT * FROM input WHERE comp = '"+sel+"'")
+    # Get names in the input tab that are not in sellist
+    cursor.execute("SELECT comp FROM input")
+    # all_comps = cursor.fetchall()
+    
+    # # Extract unique compartments as a set of strings
+    # all_unique_comps = set(row[0] for row in all_comps)
+    
+    # # Determine what is in `all_unique_comps` but not in `sellist`
+    # extra_comps = list(all_unique_comps - set(sellist))
+    
+    # sel_list = [sel]
+    
+    # # Combine `sel` with `extra_comps`
+    # comps = sel_list + extra_comps  # `sel` should already be a list
+    
+    if sel == "Clothing":
+        comps = ["Cothing (product sector)", "Import of fibers", "Import of clothing"]
+    else:
+        comps = [sel]
+    
+    query = f"SELECT * FROM input WHERE comp IN ({','.join(['?'] * len(comps))})"
+    
+    # Execute the query with the list of `comps` as parameters
+    cursor.execute(query, comps)
+    
+    # Convert the results to a DataFrame
     input_selection = pd.DataFrame(cursor.fetchall())
     
     # Rename columns of dataframe
