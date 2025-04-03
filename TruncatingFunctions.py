@@ -14,6 +14,9 @@ from scipy.stats import trapz
 import numpy.random as nr
 import numpy as np
 
+# linf = the lower treshold of the distribution, defined as 0 in setup_model_new.py
+# lsup = the upper treshold of the distribution, defined as 1 in setup_model_new.py
+
 #============= FUNCTION FOR TRUNCATING TRAPEZOIDAL DISTRIBUTIONS ==============
 
 def TrapezTrunc(TC1, TC2, spread1, spread2, N, linf=float('-inf'), lsup=float('inf')): 
