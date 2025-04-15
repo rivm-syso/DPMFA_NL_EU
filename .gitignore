@@ -2,7 +2,6 @@
 *.pyc
 input/
 output/
-CaseStudy_Runner_*
 Run_all.bat
 __pycache__/
 .Rproj.user
