@@ -202,24 +202,11 @@ for sel in sellist:
     # Open a connection to the new database
     connection = sqlite3.connect(pathtoDB)
     cursor = connection.cursor()
-    
-    # Get names in the input tab that are not in sellist
-    cursor.execute("SELECT comp FROM input")
-    # all_comps = cursor.fetchall()
-    
-    # # Extract unique compartments as a set of strings
-    # all_unique_comps = set(row[0] for row in all_comps)
-    
-    # # Determine what is in `all_unique_comps` but not in `sellist`
-    # extra_comps = list(all_unique_comps - set(sellist))
-    
-    # sel_list = [sel]
-    
-    # # Combine `sel` with `extra_comps`
-    # comps = sel_list + extra_comps  # `sel` should already be a list
-    
-    if sel == "Clothing":
-        comps = ["Cothing (product sector)", "Import of fibers", "Import of clothing"]
+       
+    if sel == "Clothing" and reg == "NL":
+        comps = ["Import of clothing (EU)", "Import of clothing (Global)"]
+    elif sel == "Clothing" and reg == "EU": 
+        comps = ["Import of clothing (Global)", "Import of plastic sheets", "Import of yarn", 'Domestic primary plastic production', 'Import of primary plastics']    
     else:
         comps = [sel]
     

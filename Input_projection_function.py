@@ -74,7 +74,7 @@ def project_input(file, inputsheetname, startyear, endyear, nodatayear, projecti
         df = df.drop_duplicates()
         df_og = df.copy()
         df_og = df.set_index('year')
-        last_year = df_og.index.max()
+        last_year = int(df_og.index.max())
         nodatayear_to_lastyear = pd.DataFrame({'year': range(nodatayear, last_year+1)})
         df_og = df_og.reset_index() 
         df = df[['year', 'value']].drop_duplicates()

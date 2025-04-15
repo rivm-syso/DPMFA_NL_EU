@@ -9,27 +9,33 @@ import pandas as pd
 import numpy as np
 from graphviz import Digraph
 
-os.chdir("N:\Documents\GitHub\DPMFA_NL_EU")
+os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+import config
+
 current_directory = os.getcwd()
 
 # Replace '/path/to/output' with the actual path to your output directory
-output_directory = "S:\BioGrid\hidsa\GitHub_opgeschoond\DPMFA_NL\Clothing (product sector)"
+#output_directory = "S:\BioGrid\hidsa\GitHub_opgeschoond\DPMFA_NL\Clothing (product sector)"
+output_directory = "N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU/output/Clothing"
 
-# Extract the startyear and endyear from the metadata textfile
-startyear = None
-endyear = None
+# # Extract the startyear and endyear from the metadata textfile
+# startyear = None
+# endyear = None
 
-# Open the file in read mode
-with open(r"S:\BioGrid\hidsa\GitHub_opgeschoond\DPMFA_NL\metadata.txt", 'r') as file:
-    for line in file:
-        if line.startswith("Startyear:"):
-            startyear = int(line.split("Startyear:")[1].strip())
+# # Open the file in read mode
+# with open(r"S:\BioGrid\hidsa\GitHub_opgeschoond\DPMFA_NL\metadata.txt", 'r') as file:
+#     for line in file:
+#         if line.startswith("Startyear:"):
+#             startyear = int(line.split("Startyear:")[1].strip())
 
-        elif line.startswith("Endyear:"):
-            endyear = int(line.split("Endyear:")[1].strip())
+#         elif line.startswith("Endyear:"):
+#             endyear = int(line.split("Endyear:")[1].strip())
 
-        if startyear is not None and endyear is not None:
-            break
+#         if startyear is not None and endyear is not None:
+#             break
+
+startyear = config.startyear
+endyear = config.endyear
 
 # Read in all inflow data to a DataFrame
 dfs = []
@@ -131,32 +137,3 @@ for mat in outflows_2019['polymer'].unique():
     # Render the graph to a file
     dot.render(f'TC_Flowcharts/flowchart_{mat}_{source}', view=True)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
