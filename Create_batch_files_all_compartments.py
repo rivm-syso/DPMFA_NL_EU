@@ -25,7 +25,7 @@ df = pd.read_csv(csv_name, sep = ";")
 destlist = []
 
 for i in df.index:
-    dest = "CaseStudy_Runner_all_compartments" +df['Name'][i] + ".py"
+    dest = "CaseStudy_Runner_" +df['Name'][i] + ".py"
     
     destlist.append(dest) 
     
