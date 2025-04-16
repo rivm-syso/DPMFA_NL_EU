@@ -93,6 +93,11 @@ if not os.path.exists(outputfolder):
 csvfolder = ".\\output\\" + mat + "\\" + "csv\\"
 if not os.path.exists(csvfolder):
     os.makedirs(csvfolder)
+else:
+    # If the folder exists, remove all csv files in it
+    for file_name in os.listdir(csvfolder):
+        file_path = os.path.join(csvfolder, file_name)
+        os.remove(file_path)
     
 #%%
 ### Get inflows, outflows, stocks and sinks
