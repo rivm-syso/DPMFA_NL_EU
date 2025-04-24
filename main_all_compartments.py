@@ -7,9 +7,14 @@ Created on Mon May 15 09:36:29 2023
 
 import os
 import sys
+import config
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+if config.OS_env == 'win':
+    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+else: 
+    os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_NL_EU")
+    
 mainfolder = os.getcwd()
 
 if os.path.isfile('main_all_compartments.py') == False:

@@ -9,7 +9,11 @@ import os
 import sys
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+if config.OS_env == 'win':
+    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+else: 
+    os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_NL_EU")
+    
 mainfolder = os.getcwd()
 
 if os.path.isfile('main.py') == False:

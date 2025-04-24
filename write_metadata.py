@@ -6,10 +6,14 @@ Created on Tue Mar 12 08:02:07 2024
 """
 
 import os
+import config
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/MyFolder")
-import config
+if config.OS_env == 'win': 
+    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+else:
+    os.chdir('/mnt/scratch_dir/hidsa/DPMFA_output')  
+
 import datetime
 
 #%% Write a metadatafile 
@@ -18,7 +22,7 @@ import datetime
 if config.OS_env == 'win': 
     mdfilename = "output\\metadata.txt" 
 else:
-    mdfilename = "/output/metadata.txt" 
+    mdfilename = "output/metadata.txt" 
 
 # Ensure the output directory exists
 os.makedirs(os.path.dirname(mdfilename), exist_ok=True)
