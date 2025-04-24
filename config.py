@@ -45,8 +45,6 @@ sellist = ['Intentionally produced microparticles', 'Clothing',
 # List of 'from' compartments of interest for calculating mass flows
 from_comps = [
     "Clothing (product sector)",
-    # "Import of clothing (EU)",
-    # "Import of clothing (Global)",
     "Intentionally produced microparticles",
     "Tyre wear",
     "Transport of primary plastics",
@@ -54,7 +52,10 @@ from_comps = [
     "Paint",
     "Technical textiles",
     "Packaging",
-    "Household textiles (product sector)"
+    "Household textiles (product sector)",
+    "Agricultural plastic recycling",
+    "Packaging recycling",
+    "Textile recycling",
 ]
 
 # List of 'to' compartments of interest for calculating mass flows
@@ -81,19 +82,3 @@ to_comps = [
     "Road side soil (micro)",
     "Indoor air (micro)"
 ]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
