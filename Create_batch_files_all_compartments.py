@@ -25,14 +25,13 @@ df = pd.read_csv(csv_name, sep = ";")
 destlist = []
 
 for i in df.index:
-    dest = "CaseStudy_Runner_" +df['Name'][i] + ".py"
-    
+    dest = "CaseStudy_Runner_" + df['Name'][i] + ".py"    
     destlist.append(dest) 
     
     if os.path.isfile(dest) == True:
         os.remove(dest)
     
-    shutil.copyfile('CaseStudy_Runner_all_compartments.py', dest)
+    shutil.copyfile('all_compartments_CaseStudy_Runner.py', dest)
     
     with fileinput.FileInput(dest, inplace=True) as file:
         for line in file:
