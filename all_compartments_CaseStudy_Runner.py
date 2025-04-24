@@ -33,6 +33,7 @@ from dpmfa import simulator as sc
 from dpmfa import components as cp
 import pandas as pd
 import pickle
+import json
 
 import setup_model_new as su  # or if cloned, change to location of cloned package
 
@@ -331,4 +332,3 @@ for name, data in data_to_save.items():
     
     with open(file_path, "wb") as f:
         pickle.dump(data, f)
-        

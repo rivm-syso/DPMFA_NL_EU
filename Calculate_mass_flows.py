@@ -10,7 +10,7 @@ Author:  Yvette Mellink and Anne Hids (RIVM)
 import os
 import config
 
-#%%
+ #%%
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
     os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")

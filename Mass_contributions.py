@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import os
+import csv
 
 import config
 
@@ -146,18 +147,27 @@ for mat in materials:
             # Aggregate the contribution from this route
             dict_mass_contributions_in_targets[target][source] += from_to_mass_matrix
     
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    # OUTPUT
-    output_folder = os.path.join(outputbasefolder, "output", mat, 'Pickle_files')
+    #%% 
+    # Save the output as csv (for anaylsis in R) and as a pickle  (for analysis in python)        
+    csvfolder = os.path.join(outputbasefolder, "output", mat, "csv")
+    
+    # Save each array in the dictionary as a CSV
+    for target in dict_mass_contributions_in_targets.keys():
+        target_dict = dict_mass_contributions_in_targets[target]
+        for source in target_dict.keys():
+            source_array = target_dict[source]
+            
+            with open(os.path.join(csvfolder, "calculatedMassFlows_" + config.reg + "_" + mat + "_" + source + "_to_" + target + ".csv"), 'w') as RM:
+                a = csv.writer(RM, delimiter = ' ')
+                a.writerows(source_array)
+        
+    pickle_output_folder = os.path.join(outputbasefolder, "output", mat, 'Pickle_files')
     
     # Provide a name for the pickle file
-    file_name = "dict_mass_contributions_in_targets.pkl"
+    pickle_file_name = "dict_mass_contributions_in_targets.pkl"
     
-    # Ensure the output folder exists
-    os.makedirs(output_folder, exist_ok=True)
-    
-    # Full path to the pickle file
-    pickle_file_path = os.path.join(output_folder, file_name)
+      # Full path to the pickle file
+    pickle_file_path = os.path.join(pickle_output_folder, pickle_file_name)
     
     # Save the mass contributions dictionary to a pickle file
     with open(pickle_file_path, "wb") as f:

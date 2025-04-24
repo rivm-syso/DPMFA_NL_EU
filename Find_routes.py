@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import itertools
 import config
+import json
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
@@ -141,10 +142,10 @@ for mat in materials:
     # OUTPUT
     
     # Define filename
-    routes_file_name = "Computed_routes_for_source_target_combinations.pkl"
+    pickle_file_name = "Computed_routes_for_source_target_combinations.pkl"
     
     # Get full path in current directory
-    pickle_file_path = os.path.join(output_folder, "Pickle_files", routes_file_name)
+    pickle_file_path = os.path.join(output_folder, "Pickle_files", pickle_file_name)
     
     # Save the pickle
     with open(pickle_file_path, "wb") as f:
