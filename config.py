@@ -45,15 +45,17 @@ sellist = ['Intentionally produced microparticles', 'Clothing',
 # List of 'from' compartments of interest for calculating mass flows
 from_comps = [
     # Product sectors
-    "Clothing (product sector)",
+    "Clothing (product sector)", # This compartment is not an input compartment, but gets inflow from import and production 
     "Intentionally produced microparticles",
     "Tyre wear",
-    "Transport of primary plastics",
+    "Transport of primary plastics", # This includes domestic pellet production and import of pellets
     "Agriculture",
     "Paint",
     "Technical textiles",
     "Packaging",
     "Household textiles (product sector)",
+    
+    # Recyling compartments
     "Agricultural plastic recycling",
     "Packaging recycling",
     "Textile recycling",
