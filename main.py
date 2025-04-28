@@ -7,6 +7,7 @@ Created on Mon May 15 09:36:29 2023
 
 import os
 import sys
+import config
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':

@@ -6,7 +6,7 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFile_Textile_test_4.xlsx"
+inputfile = "MainInputFile_Textiles_28_4_2025.xlsx"
 
 # Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
