@@ -6,7 +6,7 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFile_Textiles_28_4_2025.xlsx"
+inputfile = "MainInputFile_Textiles_29_4_2025.xlsx"
 
 # Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
@@ -17,8 +17,8 @@ model_type = 'pmfa'
 #model_type = 'dpmfa'
 
 # Selection of regions
-reg = 'NL'
-#reg = 'EU'
+#reg = 'NL'
+reg = 'EU'
 
 # When this variable is True and reg = 'EU', NL input will be subtracted from EU input.  
 NL_nested = False
@@ -55,6 +55,12 @@ from_comps = [
     "Packaging",
     "Household textiles (product sector)",
     
+    # Textile waste collection compartments
+    "Clothing waste collection",
+    "Home textile waste collection",
+    "Technical textile waste collection",
+    "Footwear waste collection",
+    
     # Recyling compartments
     "Agricultural plastic recycling",
     "Packaging recycling",
@@ -78,6 +84,7 @@ from_comps = [
 
 # List of 'to' compartments of interest for calculating mass flows
 to_comps = [
+    # Sinks
     "Landfill",
     "Natural soil (micro)",
     "Textile reuse",
@@ -98,5 +105,8 @@ to_comps = [
     "Surface water (micro)",
     "Sea water (micro)",
     "Road side soil (micro)",
-    "Indoor air (micro)"
+    "Indoor air (micro)",
+    
+    # To compartment for textile recycling 
+    "Textile recycling"
 ]
