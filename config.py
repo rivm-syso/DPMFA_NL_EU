@@ -60,6 +60,7 @@ from_comps = [
     "Home textile waste collection",
     "Technical textile waste collection",
     "Footwear waste collection",
+    "Manufacturing of clothing",
     
     # Recyling compartments
     "Agricultural plastic recycling",
