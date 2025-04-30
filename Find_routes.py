@@ -18,7 +18,6 @@ import os
 from pathlib import Path
 import itertools
 import config
-import json
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
@@ -108,17 +107,23 @@ for mat in materials:
     df_from_to  = load_pickle_file(FromTo_file)
     
     # Step 2: Define From compartments of interest
-    from_comps = config.from_comps
+    source_comps = config.source_comps
+    recycling_from_comps = config.from_recycling_comps
     
     # Step 3: Define To compartments of interest
-    to_comps = config.to_comps
+    sink_comps = config.sink_comps
+    recycling_to_comps = config.to_recycling_comps
     
     # Step 4: Create all possible combinations of from_comps and to_comps
-    combinations = list(itertools.product(from_comps, to_comps))
+    source_sink_combinations = list(itertools.product(source_comps, sink_comps))
+    recycling_combinations = list(itertools.product(recycling_from_comps, recycling_to_comps))
     
     # Step 5: Create a DataFrame with Source and Target compartments
-    df_source_target_combos = pd.DataFrame(combinations, columns=["Source compartment", "Target compartment"])
+    df_source_sink_combos = pd.DataFrame(source_sink_combinations, columns = ["Source compartment", "Target compartment"])
+    df_recycling_combos = pd.DataFrame(recycling_combinations, columns= ["Source compartment", "Target compartment"])
     
+    df_source_target_combos = pd.concat([df_source_sink_combos, df_recycling_combos], axis=0, ignore_index=True)
+        
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # COMPUTATION
     

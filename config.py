@@ -43,7 +43,7 @@ sellist = ['Intentionally produced microparticles', 'Clothing',
             'Agriculture', 'Packaging', 'Tyre wear']
 
 # List of 'from' compartments of interest for calculating mass flows
-from_comps = [
+source_comps = [
     # Product sectors
     "Clothing (product sector)", # This compartment is not an input compartment, but gets inflow from import and production 
     "Intentionally produced microparticles",
@@ -54,13 +54,6 @@ from_comps = [
     "Technical textiles",
     "Packaging",
     "Household textiles (product sector)",
-    
-    # Textile waste collection compartments
-    "Clothing waste collection",
-    "Home textile waste collection",
-    "Technical textile waste collection",
-    "Footwear waste collection",
-    "Manufacturing of clothing",
     
     # Recyling compartments
     "Agricultural plastic recycling",
@@ -84,7 +77,7 @@ from_comps = [
 ]
 
 # List of 'to' compartments of interest for calculating mass flows
-to_comps = [
+sink_comps = [
     # Sinks
     "Landfill",
     "Natural soil (micro)",
@@ -107,7 +100,19 @@ to_comps = [
     "Sea water (micro)",
     "Road side soil (micro)",
     "Indoor air (micro)",
-    
+]
+
+from_recycling_comps = [
+    # Textile waste collection compartments
+    "Clothing waste collection",
+    "Home textile waste collection",
+    "Technical textile waste collection",
+    "Footwear waste collection",
+    "Manufacturing of clothing"
+]
+
+to_recycling_comps = [
     # To compartment for textile recycling 
     "Textile recycling"
 ]
+
