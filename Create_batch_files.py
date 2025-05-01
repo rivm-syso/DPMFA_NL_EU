@@ -25,8 +25,7 @@ df = pd.read_csv(csv_name, sep = ";")
 destlist = []
 
 for i in df.index:
-    dest = "CaseStudy_Runner_" + df['sel'][i] + "_" +df['mat'][i] + ".py"
-    
+    dest = "CaseStudy_Runner_" + df['sel'][i].replace("(", "").replace(")", "") + "_" + df['mat'][i] + ".py"    
     destlist.append(dest) 
     
     if os.path.isfile(dest) == True:
