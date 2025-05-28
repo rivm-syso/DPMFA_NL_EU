@@ -17,8 +17,8 @@ model_type = 'pmfa'
 #model_type = 'dpmfa'
 
 # Selection of regions
-#reg = 'NL'
-reg = 'EU'
+reg = 'NL'
+#reg = 'EU'
 
 # When this variable is True and reg = 'EU', NL input will be subtracted from EU input.  
 NL_nested = False
@@ -73,8 +73,7 @@ source_comps = [
     "Sweaters and midlayers",
     "Swimwear",
     "T-shirts",
-    "Underwear"
-]
+    "Underwear"]
 
 # List of 'to' compartments of interest for calculating mass flows
 sink_comps = [
@@ -99,8 +98,7 @@ sink_comps = [
     "Surface water (micro)",
     "Sea water (micro)",
     "Road side soil (micro)",
-    "Indoor air (micro)",
-]
+    "Indoor air (micro)"]
 
 from_recycling_comps = [
     # Textile waste collection compartments
@@ -108,11 +106,24 @@ from_recycling_comps = [
     "Home textile waste collection",
     "Technical textile waste collection",
     "Footwear waste collection",
-    "Manufacturing of clothing"
-]
+    "Manufacturing of clothing",
+    
+    # Agricultural waste collection compartments
+    "Agriculture",
+    "Technical textiles",
+    
+    # Agricultural waste collection (micro) compartments
+    "Intentionally produced microparticles"
+    ]
 
 to_recycling_comps = [
     # To compartment for textile recycling 
-    "Textile recycling"
-]
+    "Textile recycling",
+    
+    # To compartment for agricultural waste collection
+    "Agricultural waste collection",
+    
+    # To compartment for agricultural waste collection (micro)
+    "Agricultural waste collection (micro)"    
+    ]
 
