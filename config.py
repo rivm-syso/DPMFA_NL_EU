@@ -6,7 +6,7 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFile_Textiles_29_4_2025.xlsx"
+inputfile = "MainInputFile_textile_new.xlsx"
 
 # Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
@@ -48,7 +48,8 @@ source_comps = [
     "Clothing (product sector)", # This compartment is not an input compartment, but gets inflow from import and production 
     "Intentionally produced microparticles",
     "Tyre wear",
-    "Transport of primary plastics", # This includes domestic pellet production and import of pellets
+    'Domestic primary plastic production', 
+    'Import of primary plastics', 
     "Agriculture",
     "Paint",
     "Technical textiles",
@@ -63,7 +64,7 @@ source_comps = [
     # Clothing and footwear categories
     "Apparel accessories",
     "Boots",
-    "Close-toed shoes",
+    "Closed-toed shoes",
     "Dresses skirts and jumpsuits",
     "Jackets and coats",
     "Leggings stockings tights and socks",
@@ -113,7 +114,13 @@ from_recycling_comps = [
     "Technical textiles",
     
     # Agricultural waste collection (micro) compartments
-    "Intentionally produced microparticles"
+    "Intentionally produced microparticles",
+    
+    # From compartment for agricultural recycling
+    "Agricultural waste collection",
+    
+    # From compartment for agricultural recycling
+    "Agricultural waste collection (micro)",
     ]
 
 to_recycling_comps = [
@@ -124,6 +131,8 @@ to_recycling_comps = [
     "Agricultural waste collection",
     
     # To compartment for agricultural waste collection (micro)
-    "Agricultural waste collection (micro)"    
+    "Agricultural waste collection (micro)",
+
+    "Agricultural plastic recycling"    
     ]
 
