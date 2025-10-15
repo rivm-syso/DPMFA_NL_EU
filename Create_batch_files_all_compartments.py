@@ -126,7 +126,7 @@ if config.OS_env == 'win':
 
 else:
     #%% Create text files with the commands needed to run the CaseStudy_Runner files in linux
-    cmd = "bsub -n 1 -W " + str(config.runtime) + " -M " + str(config.maxmemory) + " python "
+    cmd = "bsub -n 1 -W " + str(config.runtime) + " -M " + str(config.maxmemory) + " -e err.txt -o out.txt python "
 
      # Delete the file if it already exists
     commandsfile = 'HPC_commands.txt'
