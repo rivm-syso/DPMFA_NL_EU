@@ -100,6 +100,11 @@ for mat in materials:
         columns=["Source compartment", "Target compartment"]
     )
     
+    # Filter so that Source compartment and Target compartment are not the same to avoid errors
+    df_requested_source_target_combos = df_requested_source_target_combos[
+    df_requested_source_target_combos["Source compartment"] != df_requested_source_target_combos["Target compartment"]
+]
+    
     #%%
     # Initialize the main dictionary
     dict_mass_contributions_in_targets = {}
