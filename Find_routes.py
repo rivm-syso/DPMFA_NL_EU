@@ -109,20 +109,24 @@ for mat in materials:
     # Step 2: Define From compartments of interest
     source_comps = config.source_comps
     recycling_from_comps = config.from_recycling_comps
+    clothing_from_comp = config.from_clothing_comps
     
     # Step 3: Define To compartments of interest
     sink_comps = config.sink_comps
     recycling_to_comps = config.to_recycling_comps
+    clothing_to_comps = config.to_clothing_comps
     
     # Step 4: Create all possible combinations of from_comps and to_comps
     source_sink_combinations = list(itertools.product(source_comps, sink_comps))
     recycling_combinations = list(itertools.product(recycling_from_comps, recycling_to_comps))
+    clothing_combinations = list(itertools.product(clothing_from_comp, clothing_to_comps))
     
     # Step 5: Create a DataFrame with Source and Target compartments
     df_source_sink_combos = pd.DataFrame(source_sink_combinations, columns = ["Source compartment", "Target compartment"])
     df_recycling_combos = pd.DataFrame(recycling_combinations, columns= ["Source compartment", "Target compartment"])
+    df_clothing_combos = pd.DataFrame(clothing_combinations, columns = ["Source compartment", "Target compartment"])
     
-    df_source_target_combos = pd.concat([df_source_sink_combos, df_recycling_combos], axis=0, ignore_index=True)
+    df_source_target_combos = pd.concat([df_source_sink_combos, df_recycling_combos, df_clothing_combos], axis=0, ignore_index=True)
         
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # COMPUTATION
