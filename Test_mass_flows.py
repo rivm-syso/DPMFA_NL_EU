@@ -3,37 +3,73 @@
 import os
 import pickle
 import numpy as np
+import config
 
-mat = "RUBBER"
+mat = "Acryl"
+
+outputbasefolder = 'S:\\BioGrid\\hidsa\\DPMFA_output\\output_Baseline_EU_23_7-2025'
+
+sources = ["Clothing (product sector)", # This compartment is not an input compartment, but gets inflow from import and production 
+    "Intentionally produced microparticles",
+    "Tyre wear",
+    'Domestic primary plastic production', 
+    'Import of primary plastics', 
+    "Agriculture",
+    "Paint",
+    "Technical textiles",
+    "Packaging",
+    "Household textiles (product sector)"]
+
+clothing_categories = ["Apparel accessories",
+    "Boots",
+    "Closed-toed shoes",
+    "Dresses skirts and jumpsuits",
+    "Jackets and coats",
+    "Leggings stockings tights and socks",
+    "Open-toed shoes",
+    "Pants and shorts",
+    "Shirts and blouses",
+    "Sweaters and midlayers",
+    "Swimwear",
+    "T-shirts",
+    "Underwear"]
 
 mainfolder = os.getcwd()
 
 #%%
 # Load pickle files
 
-with open(os.path.join(mainfolder, 'output', mat, 'Pickle_files', 'dict_mass_contributions_in_targets.pkl'), 'rb') as file:  # Open the file in binary read mode
+with open(os.path.join(outputbasefolder, mat, 'Pickle_files', 'dict_mass_contributions_in_targets.pkl'), 'rb') as file:  # Open the file in binary read mode
     dict_mass_contributions = pickle.load(file)
 
-with open(os.path.join(mainfolder, 'output', mat, 'Pickle_files', 'LoggedInflows.pkl'), 'rb') as file:  # Open the file in binary read mode
+with open(os.path.join(outputbasefolder, mat, 'Pickle_files', 'LoggedInflows.pkl'), 'rb') as file:  # Open the file in binary read mode
     loggedInflows = pickle.load(file)
 
 #%%
 # Sum calculated flows into sinks
-
 dict_summed_arrays = {}
 
-# Check calculated masses in sinks against the total inflow into sinks from the masses
 for target, source_dict in dict_mass_contributions.items():
-    arrays_to_sum = list(source_dict.values())
-
+    # Filter alleen targets die in config.sink_comps zitten
+    if target not in config.sink_comps:
+        continue
+    
+    # Filter alleen de sources die in jouw 'sources'-lijst zitten
+    filtered_arrays = [
+        arr for src, arr in source_dict.items()
+        if src in sources
+    ]
+    
     # Check array shapes
-    shapes = [arr.shape for arr in arrays_to_sum]
-    if len(set(shapes)) > 1:  # If not all shapes are the same
+    shapes = [arr.shape for arr in filtered_arrays]
+    if len(shapes) == 0:
+        continue  # Geen arrays om op te tellen
+    if len(set(shapes)) > 1:
         print(f"Target '{target}' has arrays with mismatched shapes: {shapes}")
-        continue  # Skip this target or handle accordingly
+        continue
 
-    # Perform element-wise summation
-    summed_array = np.sum(arrays_to_sum, axis=0)
+    # Element-wise sum
+    summed_array = np.sum(filtered_arrays, axis=0)
     dict_summed_arrays[target] = summed_array
 
 #%% 
@@ -75,7 +111,7 @@ for target in common_targets:
         print(f"Target '{target}': Arrays are exactly equal.")
     else:
         # Approximate comparison with tolerance
-        if np.allclose(summed_array, original_inflow, atol=1e-6):
+        if np.allclose(summed_array, original_inflow, atol=1e-10):
             print(f"Target '{target}': Arrays are approximately equal (within tolerance).")
         else:
             print(f"Target '{target}': Arrays are different!")
@@ -137,3 +173,68 @@ for target, relative_diff in dict_relative_differences.items():
 # Print the results
 print(f"Largest relative difference: {max_relative_difference}")
 print(f"Found in target: {max_target}, at index: {max_index}")
+
+##################### Check mass balance for clothing categories to sinks
+
+# Som van alle clothing-categorieën naar sinks
+clothing_to_sink_arrays = {}
+
+for sink in config.sink_comps:
+    arrays = []
+    # Neem alle sources in clothing_categories voor deze sink
+    source_dict = dict_mass_contributions.get(sink, {})
+    for source in clothing_categories:
+        arr = source_dict.get(source)
+        if arr is not None:
+            arrays.append(arr)
+    if arrays:
+        # Controleer shapes
+        shapes = [arr.shape for arr in arrays]
+        if len(set(shapes)) > 1:
+            print(f"Sink '{sink}' heeft arrays met verschillende shapes uit clothing_categories: {shapes}")
+            continue
+        # Sommeer
+        clothing_to_sink_arrays[sink] = np.sum(arrays, axis=0)
+
+clothing_product_to_sink_arrays = {}
+
+for sink in config.sink_comps:
+    source_dict = dict_mass_contributions.get(sink, {})
+    arr = source_dict.get("Clothing (product sector)")
+    if arr is not None:
+        clothing_product_to_sink_arrays[sink] = arr
+
+for sink in config.sink_comps:
+    arr_cat = clothing_to_sink_arrays.get(sink)
+    arr_prod = clothing_product_to_sink_arrays.get(sink)
+    
+    if arr_cat is None and arr_prod is None:
+        print(f"Geen data voor sink '{sink}' in beide dicts.")
+        continue
+    
+    if arr_cat is None or arr_prod is None:
+        print(f"Geen data voor sink '{sink}' in één van beide dicts.")
+        continue
+    
+    # Controleer shapes
+    if arr_cat.shape != arr_prod.shape:
+        print(f"Shape mismatch voor sink '{sink}': {arr_cat.shape} vs {arr_prod.shape}")
+        continue
+
+    # Controleer gelijkheid
+    if np.array_equal(arr_cat, arr_prod):
+        print(f"Sink '{sink}': Arrays zijn exact gelijk.")
+    elif np.allclose(arr_cat, arr_prod, atol=1e-10):
+        print(f"Sink '{sink}': Arrays zijn ongeveer gelijk (binnen tolerance).")
+    else:
+        print(f"Sink '{sink}': Arrays verschillen!")
+        difference = arr_cat - arr_prod
+        print(f"Verschil:\n{difference}")
+        mismatch_indices = np.where(difference != 0)
+        if mismatch_indices[0].size > 0:
+            print(f"Verschillende indices: {mismatch_indices}")
+
+
+
+
+ 
