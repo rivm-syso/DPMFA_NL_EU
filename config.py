@@ -6,7 +6,7 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFile_textile_new.xlsx"
+inputfile = "MainInputFile_22_7_2025.xlsx"
 
 # Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
@@ -24,12 +24,12 @@ reg = 'NL'
 NL_nested = False
 
 # Select startyear and endyear 
-startyear = 2010
-endyear = 2025
+startyear = 1950
+endyear = 2050
 
 #  Running variables
 Speriod = 3 # special period for detailed output printing
-RUNS = 10 # number of runs 
+RUNS = 20 # number of runs 
 seed = 2250 
 nodatayear  = 1950 # year for which no data is available, needed for interpolation (has to be smaller than startyear)
 
@@ -60,6 +60,10 @@ source_comps = [
     "Agricultural plastic recycling",
     "Packaging recycling",
     "Textile recycling",
+    
+    # Wastewater 
+    "Wastewater (micro)",
+    "Wastewater (macro)",
     
     # Clothing and footwear categories
     "Apparel accessories",
@@ -112,6 +116,7 @@ from_recycling_comps = [
     # Agricultural waste collection compartments
     "Agriculture",
     "Technical textiles",
+    "Packaging",
     
     # Agricultural waste collection (micro) compartments
     "Intentionally produced microparticles",
@@ -120,7 +125,7 @@ from_recycling_comps = [
     "Agricultural waste collection",
     
     # From compartment for agricultural recycling
-    "Agricultural waste collection (micro)",
+    "Agricultural waste collection (micro)"
     ]
 
 to_recycling_comps = [
@@ -136,3 +141,19 @@ to_recycling_comps = [
     "Agricultural plastic recycling"    
     ]
 
+from_clothing_comps = ["Clothing (product sector)"]
+
+to_clothing_comps = [
+    "Apparel accessories",
+    "Boots",
+    "Closed-toed shoes",
+    "Dresses skirts and jumpsuits",
+    "Jackets and coats",
+    "Leggings stockings tights and socks",
+    "Open-toed shoes",
+    "Pants and shorts",
+    "Shirts and blouses",
+    "Sweaters and midlayers",
+    "Swimwear",
+    "T-shirts",
+    "Underwear"]
