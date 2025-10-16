@@ -52,7 +52,7 @@ if config.OS_env == 'win':
     outputbasefolder = mainfolder
 else:
     inputfolder = "./input/" + reg + "/"
-    outputbasefolder = '/mnt/scratch_dir/hidsa/DPMFA_output'  
+    outputbasefolder = '/data/BioGrid/hidsa/DPMFA_output'  
 
 db_name = reg + ".db" 
 

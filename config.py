@@ -6,15 +6,15 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFile_22_7_2025.xlsx"
+inputfile = "MainInputFile_textile_update.xlsx"
 
 # Select operating system for folder structures (windows or linux)
-OS_env = 'win' 
-#OS_env = 'lin' 
+#OS_env = 'win' 
+OS_env = 'lin' 
 
 # Select the model type: dpmfa or pmfa
-model_type = 'pmfa'
-#model_type = 'dpmfa'
+#model_type = 'pmfa'
+model_type = 'dpmfa'
 
 # Selection of regions
 reg = 'NL'
@@ -29,12 +29,13 @@ endyear = 2050
 
 #  Running variables
 Speriod = 3 # special period for detailed output printing
-RUNS = 20 # number of runs 
+RUNS = 10000 # number of runs 
+
 seed = 2250 
 nodatayear  = 1950 # year for which no data is available, needed for interpolation (has to be smaller than startyear)
 
-runtime = 300
-maxmemory = 16000
+runtime = 1200
+maxmemory = 60000
 
 # List of input categories 
 sellist = ['Intentionally produced microparticles', 'Clothing', 
@@ -157,3 +158,4 @@ to_clothing_comps = [
     "Swimwear",
     "T-shirts",
     "Underwear"]
+
