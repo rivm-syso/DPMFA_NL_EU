@@ -7,3 +7,5 @@ __pycache__/
 .Rproj.user
 CaseStudy_Runner_*
 *.Rproj
+*.csv
+*.pkl
