@@ -173,7 +173,7 @@ else:
     cmd = "bsub -n 1 -W " + str(config.runtime) + " -M " + str(config.maxmemory) + " python "
 
      # Delete the file if it already exists
-    commandsfile = "HPC_commands_" + config.inputfile + ".txt"
+    commandsfile = "LSF_commands_" + config.inputfile + ".txt"
 
     if os.path.isfile(commandsfile) == True:
         os.remove(commandsfile)
@@ -192,5 +192,5 @@ else:
         f.truncate()  # Remove everything from this point to the end
 
     f.close()
-    print("Writing HPC_commands.txt done...")
+    print("Writing LSF_commands.txt done...")
 
