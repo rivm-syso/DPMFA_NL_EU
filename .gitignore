@@ -5,7 +5,6 @@ output/
 Run_all.bat
 __pycache__/
 .Rproj.user
-CaseStudy_Runner_*
 *.Rproj
 *.csv
 *.pkl
