@@ -27,7 +27,6 @@ exec(code)
 
 #%%
 # Calculate mass contributions
-
 with open("Mass_contributions_" + inputfile + ".py") as f:
     code = f.read()
 exec(code)
