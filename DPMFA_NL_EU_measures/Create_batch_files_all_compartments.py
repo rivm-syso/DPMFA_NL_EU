@@ -106,14 +106,13 @@ if config.OS_env == 'win':
     file_name = 'activate.bat'
 
     # Specify on which computer disk this file can be found
-    programs_path = 'C:/' # AH: Verander naar de schijf waar programma's worden geïnstalleerd op jouw computer!
+    programs_path = 'C:/' # Change to disk where programs are installed on your computer
 
     # Find the file        
     activate_file_path = find('activate.bat', programs_path)
     activate_file_path = '"' + activate_file_path + '"'
 
     # Change the directory to where we can find the CaseStudy_Runner files
-    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU") # AH: Verander naar de GitHub/DPMFA map of je computer
     filedir = os.getcwd() 
 
     # Get the path to write_metadata.py
@@ -125,7 +124,7 @@ if config.OS_env == 'win':
     md = '"' + md + '"'
 
     # Delete the file if it already exists
-    batchfilename = 'Run_all.bat'
+    batchfilename = 'Run_all_' + config.inputfile + '.bat'
 
     if os.path.isfile(batchfilename) == True:
         os.remove(batchfilename)
@@ -166,7 +165,7 @@ if config.OS_env == 'win':
     f.write("PAUSE")
     f.close()
 
-    print("Writing Run_all.bat done...")
+    print("Writing Run_all_" + config.inputfile + ".bat done...")
 
 else:
     #%% Create text files with the commands needed to run the CaseStudy_Runner files in linux
