@@ -1,15 +1,3 @@
----
-title: "README"
-output: github_document
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12636554.svg)](https://doi.org/10.5281/zenodo.12636554)
 
 Dynamic probabilistic material flow analysis (DPMFA) model for the
@@ -18,7 +6,7 @@ with TNO.
 
 Author: Institute of Public Health and the Environment (RIVM)
 
-## Model description
+# Model description
 
 This model is used to calculate micro- and macroplastic emissions for
 certain product groups and polymers to the environment. The input needed
@@ -26,7 +14,7 @@ to run the model is present in MainInputfile.xlsx. The plastic emissions
 to environmental sinks are calculated over time and probabilistically by
 using Monte Carlo simulations.
 
-## Dependencies
+# Dependencies
 
 -   Python (version 3.11.7)
 -   Numpy (version 1.26.4)
@@ -35,12 +23,12 @@ using Monte Carlo simulations.
 -   sqlite (version 3.41.2)
 -   Anaconda (needed to create and run batch files)
 
-## How to run the model
+# How to run the model
 There are two ways to run the model: 
 1.  per polymer per source compartment (e.g. Agriculture)
 2.  per polymer, from all sources at once. 
 
-### Running the model per polymer per source compartment
+## Running the model per polymer per source compartment
 Running the model per polymer per source compartment yields the flows of micro- 
 and macroplastic from each source compartment separately. 
 
@@ -77,7 +65,7 @@ To run the model, please follow these steps:
     LSF_commands.txt file, and copy the contents into the linux terminal. Make 
     sure the working directory of the terminal is set to the DPMFA_NL_EU folder. 
 
-#### Output
+### Output
 
 Within the output folder is a folder for each category that the model
 has run for. Within each of these folders, there is a folder for each
@@ -98,7 +86,7 @@ files containing the output. There are 4 types of CSVs:
 Within the CSV files, the rows represent the number of runs (as\
 defined in config.py), and the columns represent the years.
 
-### Running the model per polymer 
+## Running the model per polymer 
 Running the model per polymer yields the flows of micro- 
 and macroplastic from all sources at once. Three scripts were added to calculate
 specific flows after running the model.  
@@ -138,7 +126,7 @@ To run the model, please follow these steps:
     LSF_commands.txt file, and copy the contents into the linux terminal. Make 
     sure the working directory of the terminal is set to the DPMFA_NL_EU folder. 
 
-#### Output
+### Output
 
 Within the Output folder is a folder for each polymer the model has run for. 
 In each of these folders there are two folders: one folder containing csv files, 
@@ -159,7 +147,7 @@ the mass flows later. There are 4 types of CSVs in the csv folder:
 Within the CSV files, the rows represent the number of runs (as\
 defined in config.py), and the columns represent the years.
 
-#### Calculating specific mass flows
+### Calculating specific mass flows
 
 Important: before calculating the mass flows, change the file path for your
 operating system in the following scripts: 
