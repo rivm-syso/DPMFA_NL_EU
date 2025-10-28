@@ -11,7 +11,7 @@ import config
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir("N:/Documents/GitHub/DPMFA_Analysis/DPMFA_NL_EU_measures")
+    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU/DPMFA_NL_EU_measures")
 else: 
     os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_Analysis/DPMFA_Analysis/DPMFA_NL_EU_measures")
     
