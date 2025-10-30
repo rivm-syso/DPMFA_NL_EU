@@ -1,0 +1,561 @@
+# This script converts EUROSTAT data on clothing and footwear 
+# import/export/production to values that are useful as input and transfer 
+# coefficients for the DPMFA_NL_EU model.
+
+# Load libraries
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(openxlsx)
+
+# Set working directory
+input_data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update/"
+
+# Load functions
+source('Textile_input_update/Input_update_functions.R')
+
+# Specify uncertainty fraction for high/low estimates 
+uncertainty_fraction <- 0.10 
+
+# Specify the source 
+input_data_source <- "https://ec.europa.eu/eurostat/databrowser/view/DS-056120__custom_15192557/default/table?lang=en"
+
+#### Calculate the total textile consumption per year for NL and EU
+
+# Read in the import, export, production and unit data
+import <- read_data(paste0(input_data_folder, "PRODCOM_clothing/Import.csv")) |>
+  rename(Import = Value)
+export <- read_data(paste0(input_data_folder, "PRODCOM_clothing/Export.csv")) |>
+  rename(Export = Value)
+production <- read_data(paste0(input_data_folder, "PRODCOM_clothing/Production.csv")) |>
+  rename(Production = Value)
+units <- read_data(paste0(input_data_folder, "PRODCOM_clothing/Units.csv")) |>
+  rename(Unit = Value)
+
+st_kg <- read_excel(paste0(input_data_folder, "PRODCOM_clothing/ST_to_KG.xlsx"))
+
+# Merge the data into one df
+clothing_merged <- import |>
+  left_join(export, by = c("Region", "Prodcom code", "Product_description", "Year")) |>
+  left_join(production, by = c("Region", "Prodcom code", "Product_description", "Year")) |>
+  left_join(units, by = c("Region", "Prodcom code", "Product_description", "Year")) |>
+  left_join(st_kg, by = c("Prodcom code"), relationship = "many-to-many") |>
+  mutate(`Conversion factor to kg` = case_when(
+    Unit == "kg" ~ 1,
+    TRUE ~ `Conversion factor to kg`
+  )) |>
+  select(-`Product description`) |>
+  rename(Conversion_factor = `Conversion factor to kg`)
+
+# Check if prodcom units are the same in the prodcom data and the conversion table
+unit_diff <- clothing_merged |>
+  filter(Unit != `Prodcom unit`)
+
+# Check if any conversion fractions are missing
+conversion_na <- clothing_merged |>
+  filter(is.na(Conversion_factor))
+
+# Convert the Prodcom units to kg
+clothing_converted <- clothing_merged |>
+  mutate(
+    Import = replace_na(Import, 0),
+    Export = replace_na(Export, 0),
+    Production = replace_na(Production, 0)
+  ) |>
+  mutate(
+    Import_kg = Import * Conversion_factor,
+    Export_kg = Export * Conversion_factor,
+    Production_kg = Production * Conversion_factor
+  ) |>
+  select(Region, `Prodcom code`, Product_description, Year, Import_kg, Export_kg, Production_kg) |>
+  distinct()
+
+#### Calculate the fraction of synthetic textiles from the total consumption
+
+# saveRDS(clothing_converted, "Textile_input_update/clothing_converted.RDS")
+
+# Read and transpose the fractions for apparel
+apparel_mat_fractions <- read_excel(paste0(input_data_folder, "Material_composition_Quantis.xlsx"), sheet = 1) |>
+  slice(3:n()) |>
+  pivot_longer(-`List of materials`, names_to = "Category", values_to = "Fraction") |>
+  pivot_wider(names_from = `List of materials`, values_from = "Fraction") |>
+  mutate(Trims_PES = Trims/3,
+         Trims_PET = Trims/3,
+         Trims_metal = Trims/3)  |> # From PEFCR 2021
+  select(-Trims)
+
+colnames(apparel_mat_fractions) <- colnames(apparel_mat_fractions) |>
+  str_replace_all(" ", "_") |>
+  str_replace_all("/", "_")
+
+# Read and transpose the fractions for footwear
+footwear_mat_fractions <- read_excel(paste0(input_data_folder, "Material_composition_Quantis.xlsx"), sheet = 2) |>
+  slice(3:n()) |>
+  pivot_longer(-`List of materials`, names_to = "Category", values_to = "Fraction") |>
+  pivot_wider(names_from = `List of materials`, values_from = "Fraction") |>
+  mutate(Trims_PES = Trims/3,
+         Trims_PET = Trims/3,
+         Trims_metal = Trims/3)  |> # From PEFCR 2021
+  select(-Trims)
+
+colnames(footwear_mat_fractions) <- colnames(footwear_mat_fractions) |>
+  str_replace_all(" ", "_") |>
+  str_replace_all("/", "_")
+
+# Read in the material categories for apparel
+apparel_mat_categories <- read_excel(paste0(input_data_folder, "Apparel_material_categories.xlsx"))
+
+# Read in the material categories for footwear
+footwear_mat_categories <- read_excel(paste0(input_data_folder, "Footwear_material_categories.xlsx"))
+
+# Add a column to the clothing_converted df to specify if the category is apparel or footwear
+clothing_converted <- clothing_converted |>
+  mutate(`Prodcom code` = as.character(`Prodcom code`)) |>
+  mutate(category = case_when(
+    str_starts(`Prodcom code`, '152') ~ "Footwear",
+    TRUE ~ "Apparel"
+  ))
+
+saveRDS(clothing_converted, "Textile_input_update/clothing_converted.RDS")
+
+# Make a separate df containing only apparel
+apparel <- clothing_converted |>
+  filter(category == "Apparel") |>
+  left_join(apparel_mat_categories, by = c("Prodcom code", "Product_description")) |>
+  group_by(Region, Year, category, Category)|>
+  summarise(Import_kg = sum(Import_kg),
+            Export_kg = sum(Export_kg),
+            Production_kg = sum(Production_kg)) |>
+  ungroup() |>
+  left_join(apparel_mat_fractions, by = "Category") 
+
+# Make a separate df containing only footwear
+footwear <- clothing_converted |>
+  filter(category == "Footwear") |>
+  left_join(footwear_mat_categories, by = c("Prodcom code", "Product_description")) |>
+  group_by(Region, Year, category, Category)|>
+  summarise(Import_kg = sum(Import_kg),
+            Export_kg = sum(Export_kg),
+            Production_kg = sum(Production_kg)) |>
+  ungroup() |>
+  left_join(footwear_mat_fractions, by = "Category") 
+
+# Calculate the masses of each material per category
+
+# Define the material columns and weight columns
+apparel_material_columns <- colnames(apparel_mat_fractions)[2:20]
+weight_columns <- c("Import_kg", "Export_kg", "Production_kg")
+
+# Calculate the masses of each material per category for each weight column
+apparel <- apparel |>
+  rowwise() |>
+  mutate(across(all_of(apparel_material_columns), 
+                .fns = list(
+                  Import = ~ . * Import_kg,
+                  Export = ~ . * Export_kg,
+                  Production = ~ . * Production_kg
+                ),
+                .names = "{col}.{fn}")) |>
+  ungroup()
+
+# Define the material columns and weight columns
+footwear_material_columns <- colnames(footwear_mat_fractions)[2:20]
+
+weight_columns <- c("Import_kg", "Export_kg", "Production_kg")
+
+# Calculate the masses of each material per category for each weight column
+footwear <- footwear |>
+  rowwise() |>
+  mutate(across(all_of(footwear_material_columns), 
+                .fns = list(
+                  Import = ~ . * Import_kg,
+                  Export = ~ . * Export_kg,
+                  Production = ~ . * Production_kg
+                ),
+                .names = "{col}.{fn}")) |>
+  ungroup()
+
+apparel_colnames <- colnames(apparel)[27:83]
+
+apparel_synthetic_materials <- c("Acrylic", "Elastane", "Polyamide", "Polyamide_recycled", "Polyester_and_other_synthetics", "Polyester_recycled", "PFTE", "Trims_PES", "Trims_PET")
+
+# Calculate Import, Export and Production in kt per material and category
+apparel_import_export_production_categories <- apparel |>
+  select(-all_of(apparel_material_columns)) |>
+  select(-c("Import_kg", "Export_kg", "Production_kg")) |>
+  pivot_longer(cols = all_of(apparel_colnames),
+               names_to = c("Material", "Weight_Type"),
+               names_sep = "\\.(?=[^.]+$)",
+               values_to = "Mass") |>
+  pivot_wider(names_from = "Weight_Type", values_from = "Mass") |>
+  filter(Material %in% apparel_synthetic_materials) |>
+  mutate(Region = case_when(
+    Region == "Netherlands" ~ "NL",
+    TRUE ~ "EU"
+  )) |>
+  mutate(Import_kt = Import/1000000,
+         Export_kt = Export/1000000,
+         Production_kt = Production/1000000) |>
+  select(-c("Import", "Export", "Production"))
+
+footwear_colnames <- colnames(footwear)[27:83]
+footwear_synthetic_materials <- c("EVA", "Polyamide", "Polyamide_recycled", "Polyester_and_other_synthetics", "Polyester_recycled", "Polyurethane", "PVC", "Rubber_synthetic", "Thermoplastic_polyurethane", "Trims_PES", "Trims_PET")
+
+# Calculate Import, Export and Production in kt per material and category
+footwear_import_export_production_categories <- footwear |>
+  select(-all_of(footwear_material_columns)) |>
+  select(-c("Import_kg", "Export_kg", "Production_kg")) |>
+  pivot_longer(cols = all_of(footwear_colnames),
+               names_to = c("Material", "Weight_Type"),
+               names_sep = "\\.(?=[^.]+$)",
+               values_to = "Mass") |>
+  pivot_wider(names_from = "Weight_Type", values_from = "Mass") |>
+  filter(Material %in% footwear_synthetic_materials) |>
+  mutate(Region = case_when(
+    Region == "Netherlands" ~ "NL",
+    TRUE ~ "EU"
+  )) |>
+  mutate(Import_kt = Import/1000000,
+         Export_kt = Export/1000000,
+         Production_kt = Production/1000000) |>
+  select(-c("Import", "Export", "Production"))
+
+All_import_export_production <- bind_rows(apparel_import_export_production_categories, footwear_import_export_production_categories) |>
+  filter(Year %in% 2011:2023) |>
+  mutate(Material = case_when(
+    Material == "Acrylic" ~ "Acryl",
+    Material == "Elastane" ~ "OTHER",
+    Material == "Polyamide" ~ "PA",
+    Material == "Polyamide_recycled" ~ "PA",
+    Material == "Polyester_and_other_synthetics" ~ "PET",
+    Material == "Polyester_recycled" ~ "PET",
+    Material == "PFTE" ~ "OTHER",
+    Material == "EVA" ~ "OTHER",
+    Material == "Polyamide" ~ "PA",
+    Material == "Polyamide_recycled" ~ "PA",
+    Material == "Polyurethane" ~ "PUR",
+    Material == "Rubber_synthetic" ~ "RUBBER",
+    Material == "Thermoplastic_polyurethane" ~ "PUR",
+    Material == "Trims_PES" ~ "OTHER",
+    Material == "Trims_PET" ~ "PET",
+    TRUE ~ Material
+  )) |>
+  group_by(Region, Year, Category, Material) |>
+  summarise(Import_kt = sum(Import_kt),
+            Export_kt = sum(Export_kt), 
+            Production_kt = sum(Production_kt)) 
+
+# Save the the import/export/production files
+saveRDS(All_import_export_production, "Textile_input_update/Mass_per_category.RDS")
+
+##### Calculate fractions of import of clothing from inside and outside the EU + domestic production in NL
+production_fraction_EU <- All_import_export_production |>
+  filter(Region == "EU") |>
+  group_by(Region, Year, Material) |>
+  summarise(Import_kt = sum(Import_kt),
+            Export_kt = sum(Export_kt), 
+            Production_kt = sum(Production_kt)) |>
+  mutate(production_fraction = Production_kt/(Production_kt + Import_kt))|>
+  ungroup() |>
+  select(Material, Year, production_fraction)
+
+# Apply the calculated fractions to the NL import data
+Import_NL <- All_import_export_production |>
+  group_by(Region, Year, Material) |>
+  summarise(Import_kt = sum(Import_kt),
+            Production_kt = sum(Production_kt),
+            Export_kt = sum(Export_kt)) |>
+  filter(Region == "NL") |>
+  left_join(production_fraction_EU, by = c("Material", "Year")) |>
+  filter(!is.na(production_fraction)) |>
+  mutate(`Import of clothing (EU)` = Import_kt*production_fraction,
+         `Import of clothing (Global)` = Import_kt*(1-production_fraction)) |>
+  select(Region, Year, Material, `Import of clothing (EU)`, `Import of clothing (Global)`) 
+
+# Save Import/Export/Production data
+Import_Export_Production_NL <- All_import_export_production |>
+  group_by(Region, Year, Material) |>
+  summarise(Import_kt = sum(Import_kt),
+            Production_kt = sum(Production_kt),
+            Export_kt = sum(Export_kt)) |>
+  #mutate(Export_kt = Export_kt*-1) |>
+  filter(Region == "NL") |>
+  left_join(production_fraction_EU, by = c("Material", "Year")) |>
+  ungroup()|>
+  mutate(Import_from_EU = Import_kt*production_fraction,
+         Import_from_outside_EU = Import_kt-Import_from_EU) |>
+  select(-production_fraction)
+
+# high_est_fraction = 1.0651 * 1.2 # From PEFCR report (2021)
+# low_est_fraction = 1.03 * 1.1 # From Burkhardt et al. (2011)
+# 
+# fibre_loss = 0.03
+# clothing_loss = 0.1
+
+# # Format the df for the maininputfile and calculate high and low estimates
+# Import_NL_maininput <- Import_NL |>
+#   pivot_longer(cols = c("Import of clothing (EU)", "Import of clothing (Global)"), names_to = "Compartment", values_to = "Data (kt)") |>
+#   mutate(HIGH = `Data (kt)`*(1+uncertainty_fraction)) |>
+#   mutate(LOW = `Data (kt)`*(1-uncertainty_fraction)) |>
+#   select(-`Data (kt)`) |>
+#   pivot_longer(cols = c("HIGH", "LOW"), names_to = "estimate", values_to = "Data (kt)") |>
+#   mutate(Geo = 1,
+#          Temp = 1,
+#          Tech = 2,
+#          Mat = 2,
+#          Rel = 2,
+#          Scale = Region,
+#          Source = paste0(estimate, " - ", input_data_source),
+#          Comments = paste0("High estimates are multiplied by 1.1, low estimates are multiplied by 0.9.")) |>
+#   ungroup()|>
+#   select(Scale, Compartment, Year, Material, `Data (kt)`, Source, Geo, Temp, Mat, Tech, Rel, Comments)
+
+########################### Calculate production and import for EU
+Import_Export_Production_EU <- All_import_export_production |>
+  filter(Region == "EU") |>
+  group_by(Region, Year, Material) |>
+  summarise(`Import (Global)` = sum(Import_kt),
+            Export_kt = sum(Export_kt), 
+            Production = sum(Production_kt)) 
+
+########################### Calculate the TCs from production to categories  
+total_import_production_mats <- All_import_export_production |>
+  mutate(Import_Production_kt = Import_kt + Production_kt) |>
+  filter(Year == 2022) |>
+  filter(Region == "NL") |>
+  group_by(Region, Year, Material) |>
+  summarise(Import_Production_kt_sum = sum(Import_Production_kt))
+
+material_fractions_source <- "https://eeb.org/library/draft-product-environmental-footprint-category-rules-pefcr-apparel-and-footwear/"
+
+Consumption_to_categories_TCs_NL <- All_import_export_production |>
+  mutate(Import_Production_kt = Import_kt + Production_kt) |>
+  filter(Region == "NL")|>
+  filter(Year == 2022) |>
+  left_join(total_import_production_mats, by = c("Region", "Year", "Material")) |>
+  mutate(Mat_TC = Import_Production_kt/Import_Production_kt_sum) |>
+  ungroup()|>
+  mutate(From = "Consumption",
+         To = Category,
+         `Geo NL` = 2,
+         `Geo EU` = NA,
+         Temp = 2,
+         Mat = 1,
+         Tech = 2,
+         Rel = 3,
+         Data = Mat_TC,
+         Scale = Region,
+         Priority = 1,
+         Source = material_fractions_source,
+         Comments = "") |>
+  select(From, To, Scale, Material, Data, Priority, Source, `Geo NL`, `Geo EU`, Temp, Mat, Tech, Rel, Comments)
+
+total_import_production_mats <- All_import_export_production |>
+  mutate(Import_Production_kt = Import_kt + Production_kt) |>
+  filter(Year == 2022) |>
+  filter(Region == "EU") |>
+  group_by(Region, Year, Material) |>
+  summarise(Import_Production_kt_sum = sum(Import_Production_kt))
+
+Consumption_to_categories_TCs_EU <- All_import_export_production |>
+  mutate(Import_Production_kt = Import_kt + Production_kt) |>
+  filter(Region == "EU")|>
+  filter(Year == 2022) |>
+  left_join(total_import_production_mats, by = c("Region", "Year", "Material")) |>
+  mutate(Mat_TC = Import_Production_kt/Import_Production_kt_sum) |>
+  ungroup()|>
+  mutate(From = "Consumption",
+         To = Category,
+         `Geo NL` = NA,
+         `Geo EU` = 1,
+         Temp = 2,
+         Mat = 1,
+         Tech = 2,
+         Rel = 3,
+         Data = Mat_TC,
+         Scale = Region,
+         Priority = 1,
+         Source = material_fractions_source,
+         Comments = "") |>
+  select(From, To, Scale, Material, Data, Priority, Source, `Geo NL`, `Geo EU`, Temp, Mat, Tech, Rel, Comments)
+
+Categories_to_export_TCS <- All_import_export_production |>
+  mutate(Import_Production_kt = Import_kt + Production_kt) |>
+  filter(Region == "NL")|>
+  filter(Year == 2022) |>
+  group_by(Region, Year, Category) |>
+  summarise(Import_Production_kt = sum(Import_Production_kt),
+            Export_kt = sum(Export_kt)) |>
+  ungroup() |>
+  mutate(Export_TC = Export_kt/Import_Production_kt) |>
+  mutate(From = Category,
+         To = "Export",
+         Material = "any",
+         `Geo NL` = 1,
+         `Geo EU` = NA,
+         Temp = 1,
+         Mat = 2,
+         Tech = 2,
+         Rel = 2,
+         Data = Export_TC,
+         Scale = Region,
+         Priority = 1,
+         Source = input_data_source,
+         Comments = "TCs calculated for 2022 (most recent year with complete data)") |>
+  select(From, To, Scale, Material, Data, Priority, Source, `Geo NL`, `Geo EU`, Temp, Mat, Tech, Rel, Comments)
+
+calculated_TCs <- bind_rows(Consumption_to_categories_TCs_EU, Consumption_to_categories_TCs_NL, Categories_to_export_TCS)
+
+####### Calculate average lifetimes
+lifetimes <- read.xlsx(paste0(input_data_folder, "Lifetimes.xlsx"))
+mat_categories <- bind_rows(footwear_mat_categories, apparel_mat_categories) |>
+  rename(Prodcom = `Prodcom code`) |>
+  mutate(Prodcom = as.double(Prodcom))
+
+Lifetimes <- lifetimes |>
+  left_join(mat_categories, by = "Prodcom") |>
+  filter(!is.na(Category)) |>
+  group_by(Category) |>
+  summarise(Average = round(mean(Average), 0)) |>
+  rename(Years = Average) |>
+  mutate(Source = "Combined from Fair claims guide and Laitala et al. (2018)")
+
+wb <- createWorkbook()
+
+# Add worksheets to the workbook
+addWorksheet(wb, "Calculated_TCs_NL")
+addWorksheet(wb, "Calculated_TCs_EU")
+addWorksheet(wb, "Import_export_production_EU")
+addWorksheet(wb, "Import_export_production_NL")
+addWorksheet(wb, "Lifetimes")
+
+# Write the dataframes to the respective worksheets
+writeData(wb, sheet = "Calculated_TCs_NL", Consumption_to_categories_TCs_NL)
+writeData(wb, sheet = "Calculated_TCs_EU", Consumption_to_categories_TCs_EU)
+writeData(wb, sheet = "Lifetimes", Lifetimes)
+writeData(wb, sheet = "Import_export_production_NL", Import_Export_Production_NL)
+writeData(wb, sheet = "Import_export_production_EU", Import_Export_Production_EU)
+
+# Save the workbook to a file
+saveWorkbook(wb, "Textile_input_update/Calculated_input_and_TCs.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update/Calculated_input_and_TCs.xlsx", overwrite = TRUE)
+
+# Figure of distribution of consumption
+
+plot_data <- All_import_export_production |>
+  filter(Year == 2022) |>
+  filter(Region == "NL") |>
+  group_by(Region, Year, Category) |>
+  summarise(Import_kt = sum(Import_kt),
+            Export_kt = sum(Export_kt),
+            Production_kt = sum(Production_kt)) |>
+  mutate(Consumption_kt = Import_kt - Export_kt) |>
+  mutate(Category = case_when(
+    Category == "Closed-toed shoes" ~ "Dichte schoenen",
+    Category == "Boots" ~ "Laarzen",
+    Category == "Open-toed shoes" ~ "Open schoenen",
+    Category == "Pants & shorts" ~ "Broeken",
+    Category == "Sweaters & midlayers" ~ "Truien",
+    Category == "Jackets & coats" ~ "Jassen",
+    Category == "T-shirts" ~ "T-shirts",
+    Category == "Underwear" ~ "Ondergoed",
+    Category == "Dresses, skirts and jumpsuits" ~ "Jurken, rokken en jumpsuits",
+    Category == "Shirts & blouses" ~ "Blousjes en overhemden",
+    Category == "Apparel accessories" ~ "Accessoires",
+    Category == "Swimwear" ~ "Badkleding",
+    Category == "Leggings, stockings, tights and socks" ~ "Leggings, pantys, maillots en sokken",
+    TRUE ~ Category
+  ))
+
+library(ggplot2)
+
+figure_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures"
+
+plot_theme = theme(
+  axis.title.x = element_text(size = 12),
+  axis.text = element_text(size = 14), 
+  axis.title.y = element_text(size = 12),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(2, 4, 2, 2, "cm")
+  #panel.grid.major = element_line(colour = "grey",size=0.25)
+)
+
+ggplot(plot_data, aes(x = reorder(Category, Consumption_kt), y = Consumption_kt, fill = Category)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(Consumption_kt, 0)), vjust = 0.2, hjust = -0.15) +
+  labs(
+    title = "Kleding consumptie (synthetisch) in Nederland (2022)",
+    x = "",
+    y = "Consumptie (kt)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_discrete() + 
+  plot_theme +
+  coord_flip() # Flip the axes
+
+ggsave(paste0("Kleding_consumptie_synthetisch_NL_",format(Sys.time(),'%Y%m%d'),".png"),
+       path = figure_folder,
+       width = 12, height = 9)
+
+# Make the same plot but with ALL MATERIALS, natural + synthetic
+apparel_only_mass <- apparel |>
+  select(Region, Year, category, Category, Import_kg, Export_kg, Production_kg) 
+  
+
+footwear_only_mass <- footwear |>
+  select(Region, Year, category, Category, Import_kg, Export_kg, Production_kg)
+
+plot_data2 <- rbind(apparel_only_mass, footwear_only_mass) |>
+  mutate(Import_kt = Import_kg/1000000,
+         Export_kt = Export_kg/1000000,
+         Production_kt = Production_kg/1000000) 
+
+plot_data2 <- plot_data2 |>
+  filter(Year == 2022) |>
+  filter(Region == "Netherlands") |>
+  group_by(Region, Year, Category) |>
+  summarise(Import_kt = sum(Import_kt),
+            Export_kt = sum(Export_kt),
+            Production_kt = sum(Production_kt)) |>
+  mutate(Consumption_kt = Import_kt - Export_kt) |>
+  mutate(Category = case_when(
+    Category == "Closed-toed shoes" ~ "Dichte schoenen",
+    Category == "Boots" ~ "Laarzen",
+    Category == "Open-toed shoes" ~ "Open schoenen",
+    Category == "Pants & shorts" ~ "Broeken",
+    Category == "Sweaters & midlayers" ~ "Truien",
+    Category == "Jackets & coats" ~ "Jassen",
+    Category == "T-shirts" ~ "T-shirts",
+    Category == "Underwear" ~ "Ondergoed",
+    Category == "Dresses, skirts and jumpsuits" ~ "Jurken, rokken en jumpsuits",
+    Category == "Shirts & blouses" ~ "Blousjes en overhemden",
+    Category == "Apparel accessories" ~ "Accessoires",
+    Category == "Swimwear" ~ "Badkleding",
+    Category == "Leggings, stockings, tights and socks" ~ "Leggings, pantys, maillots en sokken",
+    TRUE ~ Category
+  ))
+
+ggplot(plot_data2, aes(x = reorder(Category, Consumption_kt), y = Consumption_kt, fill = Category)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(Consumption_kt, 0)), vjust = 0.2, hjust = -0.15) +
+  labs(
+    title = "Kleding consumptie (synthetisch en natuurlijk) in Nederland (2022)",
+    x = "",
+    y = "Consumptie (kt)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_discrete() + 
+  plot_theme +
+  coord_flip() # Flip the axes
+
+ggsave(paste0("Kleding_consumptie_synthetisch_en_natuurlijk_NL_",format(Sys.time(),'%Y%m%d'),".png"),
+       path = figure_folder,
+       width = 12, height = 9)
+
+

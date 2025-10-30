@@ -1,0 +1,881 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{R}
+library(tidyverse)
+library(ggplot2)
+
+data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output"
+#data_folder <- "~/my_biogrid/Rdata_files"
+
+selectyear <- 2050
+```
+
+# Define parameters
+```{R}
+# Define the names of the source compartments
+source_compartments <- c(
+    "Clothing (product sector)", # This compartment is not an input compartment, but gets inflow from import and production 
+    "Intentionally produced microparticles",
+    "Tyre wear",
+    'Domestic primary plastic production', 
+    'Import of primary plastics', 
+    "Agriculture",
+    "Paint",
+    "Technical textiles",
+    "Packaging",
+    "Household textiles (product sector)")
+
+# Define the names of clothing categories
+clothing_category_compartments <- c(
+    "Apparel accessories",
+    "Boots",
+    "Closed-toed shoes",
+    "Dresses skirts and jumpsuits",
+    "Jackets and coats",
+    "Leggings stockings tights and socks",
+    "Open-toed shoes",
+    "Pants and shorts",
+    "Shirts and blouses",
+    "Sweaters and midlayers",
+    "Swimwear",
+    "T-shirts",
+    "Underwear"
+)
+
+clothing <- c(
+    "Apparel accessories",
+    "Dresses skirts and jumpsuits",
+    "Jackets and coats",
+    "Leggings stockings tights and socks",
+    "Pants and shorts",
+    "Shirts and blouses",
+    "Sweaters and midlayers",
+    "Swimwear",
+    "T-shirts",
+    "Underwear"
+)
+
+footwear <- c(
+    "Boots",
+    "Closed-toed shoes",
+    "Open-toed shoes"
+)
+
+# Define the names of recycling compartments
+textile_recycling_compartments <- c(
+    "Clothing waste collection",
+    "Home textile waste collection",
+    "Technical textile waste collection",
+    "Footwear waste collection",
+    "Manufacturing of clothing"
+)
+
+recycling_from_compartments <- c(
+    "Agricultural plastic recycling",
+    "Packaging recycling",
+    "Textile recycling"
+)
+
+agricultural_waste_col_from_compartments <- c(
+  "Agriculture",
+  "Intentionally produced microparticles",
+  "Technical textiles",
+  "Packaging"
+)
+
+sink_compartments <- c("Agricultural soil",
+                       "Natural soil",
+                       "Residential soil",
+                       "Road side soil",
+                       "Surface water",
+                       "Outdoor air",
+                       "Sub-surface soil",
+                       "Sea water")
+```
+
+# Load data
+```{R}
+data_name <- "Baseline_EU_v3"
+# 
+# load(paste0(data_folder, "/DPMFA_calculated_mass_flows_NL", data_name, ".RData"))
+
+load(paste0(data_folder, "/DPMFA_calculated_mass_flows_", data_name ,"_years_of_interest.RData"))
+
+# Filter for selectyear
+PMFA_NL_new <- DPMFA_years_of_interest |>
+  select(-iD_source) |>
+  mutate(Mass_Polymer_kt = map(Mass_Polymer_kt, ~ .x[, as.character(selectyear), drop = FALSE])) |>
+  mutate(
+    Mass_Polymer_kt = map(
+      Mass_Polymer_kt,
+      ~ {
+        vals <- .x[, 1]
+        # Als het een list is, unlist deze dan
+        if (is.list(vals)) vals <- unlist(vals)
+        tibble(RUN = rownames(.x), Year = selectyear, Mass_Polymer_kt = as.numeric(vals))
+      }
+    )
+  ) |>
+  select(-To_compartment)
+```
+
+Test mass balance clothing
+```{R}
+pmfa_data_test <- PMFA_NL_new |>
+  unnest(Mass_Polymer_kt) 
+
+test_from_clothing <- pmfa_data_test |>
+  filter(From_compartment == "Clothing (product sector)")
+
+unique(test_from_clothing$To_Compartment)
+
+test_from_categories <- pmfa_data_test |>
+  filter(From_compartment %in% clothing_category_compartments)
+
+unique(test_from_categories$To_Compartment)
+
+test_from_clothing <- test_from_clothing |>
+  filter(To_Compartment %in% unique(test_from_categories$To_Compartment))
+
+test_from_categories <- test_from_categories |>
+  mutate(From_compartment = "Clothing categories summed") |>
+  group_by(Type, Scale, From_compartment, To_Compartment, Polymer, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt))
+
+# Compare 
+test_merged <- test_from_categories |>
+  left_join(test_from_clothing, by = c("To_Compartment", "Year", "RUN", "Scale", "Type", "Polymer", "Material_Type"), suffix = c("_categories_summed", "_clothing")) |>
+  mutate(diff = Mass_Polymer_kt_categories_summed - Mass_Polymer_kt_clothing)
+
+```
+
+# Divide emissions from textile recycling between clothing, home textiles and technical textiles
+```{R}
+# Get the textile recycling data 
+textile_waste_dist <- PMFA_NL_new |>
+  filter(From_compartment %in% textile_recycling_compartments) |>
+  unnest(cols = c(Mass_Polymer_kt)) 
+
+# Calculate the total mass to textile waste collection per RUN, Year and Polymer
+textile_waste_total <- textile_waste_dist |>
+  group_by(Type, Scale, Polymer, To_Compartment, Material_Type, RUN, Year) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  ungroup()
+
+# Calculate the fraction that goes from a textile source to textile waste collection
+textile_waste_fractions <- textile_waste_dist |>
+  left_join(textile_waste_total, by = c("Type", "Scale", "Polymer", "To_Compartment", "Material_Type", "RUN", "Year")) |>
+  mutate(Textile_waste_collection_frac = Mass_Polymer_kt.x/Mass_Polymer_kt.y) |>
+  select(-Mass_Polymer_kt.x) |>
+  select(-Mass_Polymer_kt.y)
+
+# Check if the fractions add up to 1
+frac_check <- textile_waste_fractions |>
+  group_by(Type, Scale, Polymer, To_Compartment, Material_Type, RUN, Year) |>
+  summarise(Textile_waste_collection_frac = sum(Textile_waste_collection_frac))
+
+if(any(round(frac_check$Textile_waste_collection_frac, 10) != 1)){
+  warning("Not all fractions add up to 1")
+}
+
+# Filter the emissions from recycling compartments to sinks from the original dataset
+recycling_emissions <- PMFA_NL_new |>
+  filter(From_compartment %in% recycling_from_compartments) |>
+  unnest(cols = c(Mass_Polymer_kt)) 
+
+# Join the Textile recycling masses to sinks to the fractions calculated earlier per textile type
+textile_recycling_emissions <- recycling_emissions |>
+  filter(From_compartment == "Textile recycling") 
+
+textile_recycling_emissions_joined <- textile_recycling_emissions |>
+  right_join(
+    textile_waste_fractions,
+    by = c("Type", "Scale", "Polymer", "From_compartment" = "To_Compartment", 
+           "Material_Type", "RUN", "Year")
+  , relationship = "many-to-many") |>
+  rename(Textile_compartment = From_compartment.y) |>
+  mutate(Mass_Polymer_kt = Mass_Polymer_kt*Textile_waste_collection_frac) |>
+  mutate(From_compartment = case_when(
+    Textile_compartment == "Clothing waste collection" ~ "Clothing recycling",
+    Textile_compartment == "Home textile waste collection" ~ "Home textile recycling",
+    Textile_compartment == "Technical textile waste collection" ~ "Technical textile recycling",
+    Textile_compartment == "Footwear waste collection" ~ "Footwear recycling"
+  )) |>
+  select(-Textile_compartment) |>
+  select(-Textile_waste_collection_frac)
+
+# Make a df with the other emissions originating from recycling
+agriculture_and_packaging_recycling <- recycling_emissions |>
+  filter(From_compartment != "Textile recycling")
+
+# Bind all recycling data back into one dataframe
+textile_recycling_emissions <- textile_recycling_emissions_joined |>
+  mutate(From_compartment = case_when(
+    From_compartment == "Clothing recycling" ~ "Clothing (product sector)",
+    From_compartment == "Home textile recycling" ~ "Home textiles (product sector)",
+    From_compartment == "Technical textile recycling" ~ "Technical textiles",
+    From_compartment == "Footwear recycling" ~ "Clothing (product sector)", 
+    TRUE ~ From_compartment
+  )) |>
+  rename(Recycling_mass_kt = Mass_Polymer_kt)
+```
+
+# Divide emissions from agricultural plastic recycling between agriculture, packaging, intentionally produced microparticles and technical textiles
+```{R}
+# Step 1: Filter for relevant data related to agricultural plastic recycling
+agricultural_data <- PMFA_NL_new |>
+  filter(From_compartment %in% agricultural_waste_col_from_compartments) |>
+  filter(To_Compartment == "Agricultural plastic recycling") |>
+  unnest(cols = c(Mass_Polymer_kt)) 
+
+# Step 2: Calculate the total mass polymer for each group and determine the fraction
+agricultural_with_fractions <- agricultural_data |>
+  group_by(Scale, To_Compartment, Polymer, RUN, Year, Material_Type) |>
+  mutate(
+    Mass_Polymer_kt_total = sum(Mass_Polymer_kt, na.rm = TRUE),
+    contribution_fraction = Mass_Polymer_kt / Mass_Polymer_kt_total  # Calculate fraction
+  ) |>
+  ungroup()
+
+# Step 3: Validate if contribution fractions add up to 1
+# Summing up fractions for each group to check if they equal 1
+contribution_validation <- agricultural_with_fractions |>
+  group_by(Scale, To_Compartment, Polymer, RUN, Year, Material_Type) |>
+  summarise(contribution_fraction_sum = sum(contribution_fraction, na.rm = TRUE)) |>
+  ungroup()
+
+# Check if any group fails the condition (fractions not summing to 1)
+failed_fractions <- contribution_validation |>
+  filter(abs(contribution_fraction_sum - 1) > 1e-15)  # Use tolerance for floating-point comparisons
+
+# Print a warning if any group has issues
+if (nrow(failed_fractions) > 0) {
+  warning("Some contribution fractions do not add up to 1!")
+  print(failed_fractions)  # Print the problematic groups
+}
+
+# Step 4: Join fractions back with the emissions data and calculate recycling emissions
+agricultural_recycling_emissions <- agricultural_with_fractions |>
+  left_join(
+    agriculture_and_packaging_recycling |> 
+      filter(From_compartment == "Agricultural plastic recycling"),
+    by = c(
+      "Type" = "Type",
+      "Scale" = "Scale",
+      "To_Compartment" = "From_compartment",
+      "Polymer" = "Polymer",
+      "Material_Type" = "Material_Type",
+      "RUN" = "RUN",
+      "Year" = "Year"
+    ), relationship = "many-to-many"
+  ) |>
+  # Step 5: Reallocate the emissions based on the contribution fraction
+  mutate(Recycling_mass_kt = contribution_fraction * Mass_Polymer_kt.y) |>
+  select(-c(To_Compartment, Mass_Polymer_kt.y, Mass_Polymer_kt.x, Mass_Polymer_kt_total, contribution_fraction)) |>
+  rename(To_Compartment = To_Compartment.y)
+```
+
+# Divide emissions from agricultural plastic recycling between agriculture, intentionally produced microparticles and technical textiles
+
+```{R} 
+agricultural_recycling_dist <- PMFA_NL_new |> 
+  filter(From_compartment %in% agricultural_waste_col_from_compartments) |> 
+  filter(To_Compartment == "Agricultural plastic recycling")|> 
+  unnest(cols = c(Mass_Polymer_kt)) 
+
+agricultural_recycling_total <- agricultural_recycling_dist |> 
+  group_by(Scale, To_Compartment, Polymer, RUN, Year, Material_Type) |> 
+  summarise(Mass_Polymer_kt_total = sum(Mass_Polymer_kt)) 
+
+agricultural_recycling_joined <- agricultural_recycling_dist |> 
+  left_join(agricultural_recycling_total, by = c("Scale", "To_Compartment", "Polymer", "Material_Type", "RUN", "Year")) |>
+  mutate(contribution_fraction = Mass_Polymer_kt/Mass_Polymer_kt_total) |>
+  select(-Mass_Polymer_kt) |> 
+  select(-Mass_Polymer_kt_total) 
+
+agricultural_plastic_recycling_emissions <- agriculture_and_packaging_recycling |> 
+  filter(From_compartment == "Agricultural plastic recycling") 
+
+agricultural_recycling_emissions <- agricultural_plastic_recycling_emissions |> 
+  left_join(agricultural_recycling_joined, by = c(
+    "Type" = "Type", 
+    "Scale" = "Scale",
+    "From_compartment" = "To_Compartment", 
+    "Polymer" = "Polymer", 
+    "RUN" = "RUN", 
+    "Year" = "Year" ), relationship = "many-to-many"
+    ) |>
+  mutate(Mass_Polymer_kt = contribution_fraction * Mass_Polymer_kt) |> 
+  select(-From_compartment) |> 
+  rename(From_compartment = From_compartment.y) |> 
+  select(-contribution_fraction)|> 
+  rename(Recycling_mass_kt = Mass_Polymer_kt) |>
+  select(-Material_Type.y) |>
+  rename(Material_Type = Material_Type.x)
+```
+
+# Packaging recycling emissions
+```{R}
+packaging_recycling_emissions <- agriculture_and_packaging_recycling |>
+  filter(From_compartment == "Packaging recycling")|>
+  rename(Recycling_mass_kt = Mass_Polymer_kt) |>
+  mutate(From_compartment = "Packaging")
+```
+
+# Bind all emissions from recycling together again
+```{R}
+all_recycling_emissions <- rbind(textile_recycling_emissions, agricultural_recycling_emissions, packaging_recycling_emissions)
+```
+
+# Get the sources to sinks data
+```{R}
+source_to_sinks_NL_new <- PMFA_NL_new |>
+  filter(From_compartment %in% source_compartments) |>
+  unnest(cols = c(Mass_Polymer_kt)) |>
+  mutate(From_compartment = case_when(
+    From_compartment == 'Domestic primary plastic production' ~ "Pre-production pellets",
+    From_compartment == 'Import of primary plastics' ~ "Pre-production pellets",
+    TRUE ~ From_compartment
+  )) |>
+  group_by(Type, Scale, Polymer, From_compartment, To_Compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt))
+```
+
+# Assign emissions during recycling to pre-production pellets and subtract them from original sources
+```{R}
+# Sum recycling data and emissions per source over polymers
+source_to_sinks_data <- source_to_sinks_NL_new |>
+  group_by(Type, Scale, From_compartment, To_Compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  ungroup()
+
+all_recycling <- all_recycling_emissions |>
+  group_by(Type, Scale, From_compartment, To_Compartment, Material_Type, Year, RUN) |>
+  summarise(Recycling_mass_kt = sum(Recycling_mass_kt)) |>
+  ungroup()
+
+# Subtract the recycling emission from the emissions of their original compartments
+source_to_sinks_data_joined <- source_to_sinks_data |>
+  left_join(all_recycling, by = c("Type", "Scale", "From_compartment", "To_Compartment", "Material_Type", "RUN", "Year")) |>
+  mutate(Recycling_mass_kt = replace_na(Recycling_mass_kt, 0)) |>
+  mutate(Corrected_mass_Polymer_kt = Mass_Polymer_kt - Recycling_mass_kt) |>
+  select(-Mass_Polymer_kt) |>
+  select(-Recycling_mass_kt) |>
+  rename(Mass_Polymer_kt = Corrected_mass_Polymer_kt)
+
+# Check for any negative masses 
+sts_below_zero <- source_to_sinks_data_joined |>
+  filter(round(Mass_Polymer_kt, 10) < 0)
+
+if(!nrow(sts_below_zero) == 0){
+  warning("Some contribution masses are negative! Please check.")
+  print(sts_below_zero)
+}
+
+# Sum all recycling emissions together 
+total_recycling <- all_recycling |>
+  group_by(Type, Scale, To_Compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Recycling_mass_kt)) |>
+  mutate(From_compartment = "Pre-production pellets")
+  
+data_relocated_recycling <- rbind(source_to_sinks_data_joined, total_recycling) |>
+  group_by(Type, Scale, From_compartment, To_Compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  mutate(From_compartment = case_when(
+    From_compartment == "Clothing (product sector)" ~ "Clothing and footwear",
+    From_compartment == "Household textiles (product sector)" ~ "Home textiles",
+    TRUE ~ From_compartment
+  )) 
+
+data_relocated_recycling_to_sinks <- data_relocated_recycling |>
+  filter(To_Compartment %in% sink_compartments)
+```
+
+```{r initFig}
+figure_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures"
+
+# Define colors for groups source_colors["Macroplastic"]
+source_colors <- c(
+  "Agriculture" = "#F8766D",
+  "Clothing and footwear" = "#E58700",
+  "Clothing" = "#FC717F",
+  "Footwear" = "#E7861B",
+  "Intentionally produced microparticles" = "#C99800",
+  "Macroplastic" = "#A3A500",
+  "Packaging" = "#619cff",
+  "Paint" = "#00BA38",
+  "Pre-production pellets" = "#00C0AF",
+  "Technical textiles" = "#00B0F6",
+  "Home textiles" = "#B983FF",
+  "Tyre wear" = "#ff67a4"
+)
+
+sink_colors <- c(
+  "water" = "dodgerblue4",
+  "air" = "slategray3",
+  "soil" = "darkgoldenrod"
+)
+
+# Create a theme for the plots
+plot_theme = theme(
+  axis.title.x = element_text(size = 16),
+  axis.text = element_text(size = 14), 
+  axis.title.y = element_text(size = 16),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(2, 4, 2, 2, "cm")
+  #panel.grid.major = element_line(colour = "grey",size=0.25)
+)
+
+plot_theme2 = theme(
+  axis.title.x = element_text(size = 14),
+  axis.text = element_text(size = 10), 
+  axis.title.y = element_text(size = 14),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(2, 4, 2, 2, "cm")
+)
+
+```
+
+Plot all emissions to environment
+```{R}
+# Filter data
+plot_data <- data_relocated_recycling_to_sinks |>
+  filter(To_Compartment %in% sink_compartments) |>
+  filter(!is.na(Material_Type)) |>
+  mutate(From_compartment = case_when(
+    Material_Type == "macro" ~ "Macroplastic",
+    TRUE ~ From_compartment
+  )) |>
+  group_by(Type, Scale, From_compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  rename(Source = From_compartment) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  filter(Year == selectyear)
+
+pellets <- data_relocated_recycling_to_sinks |>
+  filter(From_compartment == "Pre-production pellets")
+summary(pellets)
+
+# Make violin plot
+all_emissions_plot <- ggplot(plot_data, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Micro- & Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+all_emissions_plot
+
+ggsave(paste0(data_name, "_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+```{R Plot emissions from clothing compartments to the environment}
+clothing_compartments_to_sinks <- PMFA_NL_new |>
+  filter(From_compartment %in% clothing_category_compartments) |>
+  unnest(cols = c(Mass_Polymer_kt)) |>
+  filter(To_Compartment %in% sink_compartments) |>
+  filter(Material_Type == "micro") 
+
+clothing_compartments_year <- clothing_compartments_to_sinks |>
+  group_by(Type, Scale, From_compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  rename(Source = From_compartment) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  filter(Year == selectyear)
+
+clothing_plot_data <- clothing_compartments_year
+
+# Make violin plot
+clothing_to_sinks_plot <- ggplot(clothing_plot_data, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_discrete() +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Microplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+clothing_to_sinks_plot
+
+ggsave(paste0("Clothing_to_env_sinks_", data_name, "_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+# Clothing to sinks without footwear
+```{R}
+clothing_no_footwear_plot_data <- clothing_plot_data |>
+  filter(Source %in% clothing)
+
+# Make violin plot
+clothing_to_sinks_plot <- ggplot(clothing_no_footwear_plot_data, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_discrete() +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Microplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+clothing_to_sinks_plot
+
+ggsave(paste0("Clothing_without_footwear_to_env_sinks_", data_name, "_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+# Clothing plot NL
+
+```{R}
+clothing_plot_data_NL <- clothing_plot_data |>
+  mutate(Source = case_when(
+    Source == "Closed-toed shoes" ~ "Dichte schoenen",
+    Source == "Boots" ~ "Laarzen",
+    Source == "Open-toed shoes" ~ "Open schoenen",
+    Source == "Pants and shorts" ~ "Broeken",
+    Source == "Sweaters and midlayers" ~ "Truien",
+    Source == "Jackets and coats" ~ "Jassen",
+    Source == "T-shirts" ~ "T-shirts",
+    Source == "Underwear" ~ "Ondergoed",
+    Source == "Dresses skirts and jumpsuits" ~ "Jurken, rokken en jumpsuits",
+    Source == "Shirts and blouses" ~ "Blousjes en overhemden",
+    Source == "Apparel accessories" ~ "Accessoires",
+    Source == "Swimwear" ~ "Badkleding",
+    Source == "Leggings stockings tights and socks" ~ "Leggings, pantys, maillots en sokken",
+    TRUE ~ Source
+  ))
+
+# Make violin plot
+clothing_to_sinks_plot_NL <- ggplot(clothing_plot_data_NL, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_discrete() +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Microplastic emissies (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+clothing_to_sinks_plot_NL
+
+ggsave(paste0("Clothing_to_env_sinks_Nederlands_", data_name, "_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+# Plot clothing to sinks
+```{R}
+clothing_summary <- clothing_compartments_year |>
+  group_by(Scale, Source, Year) |>
+  summarise(q1 = quantile(Mass_Polymer_t, 0.25),
+            mean= mean(Mass_Polymer_t),
+            q2 = quantile(Mass_Polymer_t, 0.75),
+            median = median(Mass_Polymer_t),
+            min = min(Mass_Polymer_kt),
+            max = max(Mass_Polymer_kt))
+```
+
+# Plot emissions from all categories but separate clothing and footwear
+
+```{R}
+clothing_footwear_sep <- PMFA_NL_new |>
+  filter(From_compartment %in% clothing_category_compartments) |>
+  unnest(cols = c(Mass_Polymer_kt)) |>
+  filter(To_Compartment %in% sink_compartments) |>
+  mutate(Source_new = case_when(
+    From_compartment %in% clothing ~ "Clothing",
+    From_compartment %in% footwear ~ "Footwear"
+  )) |>
+  select(-From_compartment) |>
+  rename(From_compartment = Source_new) |>
+    mutate(From_compartment = case_when(
+    Material_Type == "macro" ~ "Macroplastic",
+    TRUE ~ From_compartment
+  )) |>
+  group_by(Type, Scale, From_compartment, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  rename(Source = From_compartment) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) 
+
+STS_without_clothing_footwear <- plot_data |>
+  filter(Source != "Clothing and footwear")
+
+STS_separated_clothing_footwear <- rbind(clothing_footwear_sep, STS_without_clothing_footwear) |>
+  group_by(Type, Scale, Source, Material_Type, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) 
+
+# Make violin plot
+all_emissions_plot_sep <- ggplot(STS_separated_clothing_footwear, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Micro- & Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+all_emissions_plot_sep
+
+ggsave(paste0("Clothing_footwear_sep", data_name, "_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+## Figure footwear
+```{R}
+# Make violin plot
+footwear_plot_data <- clothing_plot_data |>
+  filter(Source %in% footwear)
+
+footwear_to_sinks_plot <- ggplot(footwear_plot_data, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_discrete() +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Microplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+footwear_to_sinks_plot
+
+ggsave(paste0("Footwear_to_env_sinks_", data_name,"_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 3)
+```
+
+# Emissions to environmental compartment from sources separately
+```{R}
+plot_data_air <- data_relocated_recycling_to_sinks |>
+  filter(To_Compartment == "Outdoor air") |>
+    filter(!is.na(Material_Type)) |>
+  mutate(From_compartment = case_when(
+    Material_Type == "macro" ~ "Macroplastic",
+    TRUE ~ From_compartment
+  )) |>
+  rename(Source = From_compartment) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  group_by(Source, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t))
+
+# Make violin plot
+outdoor_air_plot <- ggplot(plot_data_air, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Micro- & Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+outdoor_air_plot
+
+ggsave(paste0("Air_plot_", data_name,"_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+```{R}
+plot_data_soil <- data_relocated_recycling_to_sinks |>
+  filter(str_detect(To_Compartment, "soil")) |>
+  filter(!is.na(Material_Type)) |>
+  mutate(From_compartment = case_when(
+    Material_Type == "macro" ~ "Macroplastic",
+    TRUE ~ From_compartment
+  )) |>
+  rename(Source = From_compartment) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt * 1000) |>
+  group_by(Source, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t), .groups = "drop")
+
+# Make violin plot
+outdoor_soil_plot <- ggplot(plot_data_soil, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Micro- & Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+outdoor_soil_plot
+
+ggsave(paste0("Soil_plot_", data_name,"_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+
+```{R}
+plot_data_water <- data_relocated_recycling_to_sinks |>
+  filter(str_detect(To_Compartment, "water")) |>
+  filter(!is.na(Material_Type)) |>
+  mutate(From_compartment = case_when(
+    Material_Type == "macro" ~ "Macroplastic",
+    TRUE ~ From_compartment
+  )) |>
+  rename(Source = From_compartment) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt * 1000) |>
+  group_by(Source, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t), .groups = "drop")
+
+# Make violin plot
+outdoor_water_plot <- ggplot(plot_data_water, aes(x = reorder(Source, Mass_Polymer_t), y = Mass_Polymer_t, fill=Source)) +
+  geom_violin() +
+  scale_fill_manual(values = source_colors) +
+  theme(legend.position="none")+
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000),
+    labels = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000)
+  ) +             # Log-transform y-axis
+  labs(x = "", y = "Micro- & Macroplastic emissions (ton)") +                   # Adjust labels
+  coord_flip() +
+  plot_theme
+outdoor_water_plot
+
+ggsave(paste0("Water_plot_", data_name,"_", as.character(selectyear), ".png"),
+       path = figure_folder,
+       width = 12, height = 6)
+```
+Make summary table of Clothing and Footwear summed to sinks
+```{R}
+# Clothing
+summary_table_clothing <- PMFA_NL_new |>
+  filter(From_compartment %in% clothing_category_compartments) |>
+  filter(Material_Type == "micro" | Material_Type == "macro") |>
+  unnest(cols = c(Mass_Polymer_kt)) |>
+  filter(To_Compartment %in% environmental_sinks)|>
+  filter(From_compartment %in% clothing) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  group_by(Type, Scale, To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  mutate(Source = "Clothing") |>
+  group_by(Type, Source, Scale,To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  group_by(Type, Source, Scale,To_Compartment, Year) |>
+  summarise(p50_t = quantile(Mass_Polymer_t, 0.5))
+
+summed_emissions = sum(summary_table_clothing$p50_t)
+
+summary_table_clothing <- summary_table_clothing |>
+  mutate(percentage = (p50_t/summed_emissions)*100)
+
+# Footwear
+summary_table_footwear <- PMFA_NL_new |>
+  filter(From_compartment %in% footwear) |>
+  filter(Material_Type == "micro" | Material_Type == "macro") |>
+  unnest(cols = c(Mass_Polymer_kt)) |>
+  filter(To_Compartment %in% environmental_sinks)|>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  group_by(Type, Scale, To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  mutate(Source = "Footwear") |>
+  group_by(Type, Source, Scale,To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  group_by(Type,Source, Scale,To_Compartment, Year) |>
+  summarise(p50_t = quantile(Mass_Polymer_t, 0.5))
+
+summed_emissions = sum(summary_table_footwear$p50_t)
+
+summary_table_footwear <- summary_table_footwear |>
+  mutate(percentage = (p50_t/summed_emissions)*100)
+
+table4 <- rbind(summary_table_clothing, summary_table_footwear)
+
+write.xlsx(table4, paste0("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Tables/Table4_", data_name, ".xlsx"))
+```
+
+# Make table comparing emissions to environmental sinks to emissions to other sinks
+```{R}
+# Clothing
+summary_table_clothing <- PMFA_NL_new |>
+  filter(From_compartment %in% clothing) |>
+  unnest(cols = c(Mass_Polymer_kt)) |>
+  filter(To_Compartment %in% c(environmental_sinks, other_sinks))|>
+  mutate(To_Compartment = case_when(
+    To_Compartment %in% environmental_sinks ~ "Environmental sinks",
+    TRUE ~ To_Compartment
+  )) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  group_by(Type, Scale, Material_Type, To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  mutate(Source = "Clothing") |>
+  group_by(Type, Source, Scale, To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  group_by(Type, Source, Scale,To_Compartment, Year) |>
+  summarise(p50_t = quantile(Mass_Polymer_t, 0.5),
+            p25_t = quantile(Mass_Polymer_t, 0.25),
+            p75_t = quantile(Mass_Polymer_t, 0.75))
+
+summed_emissions = sum(summary_table_clothing$p50_t)
+
+summary_table_clothing <- summary_table_clothing |>
+  mutate(percentage = (p50_t/summed_emissions)*100)
+
+# Footwear
+summary_table_footwear <- PMFA_NL_new |>
+  filter(From_compartment %in% footwear) |>
+ unnest(cols = c(Mass_Polymer_kt)) |>
+  filter(To_Compartment %in% c(environmental_sinks, other_sinks))|>
+  mutate(To_Compartment = case_when(
+    To_Compartment %in% environmental_sinks ~ "Environmental sinks",
+    TRUE ~ To_Compartment
+  )) |>
+  mutate(Mass_Polymer_t = Mass_Polymer_kt*1000) |>
+  group_by(Type, Scale, Material_Type, To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  mutate(Source = "Footwear") |>
+  group_by(Type, Source, Scale, To_Compartment, Year, RUN) |>
+  summarise(Mass_Polymer_t = sum(Mass_Polymer_t)) |>
+  group_by(Type, Source, Scale,To_Compartment, Year) |>
+  summarise(p50_t = quantile(Mass_Polymer_t, 0.5),
+            p25_t = quantile(Mass_Polymer_t, 0.25),
+            p75_t = quantile(Mass_Polymer_t, 0.75))
+
+summed_emissions = sum(summary_table_footwear$p50_t)
+
+summary_table_footwear <- summary_table_footwear |>
+  mutate(percentage = (p50_t/summed_emissions)*100)
+
+table <- rbind(summary_table_clothing, summary_table_footwear)
+
+write.xlsx(table, paste0("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Tables/Table_mass_and_percentages_to_sinks_", data_name, ".xlsx"))
+```
