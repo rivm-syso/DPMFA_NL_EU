@@ -11,14 +11,15 @@ import os
 import csv
 
 import config
+import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+    os.chdir(win_main_folder)
     outputbasefolder = os.getcwd()
 else: 
-    os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_NL_EU")
-    outputbasefolder = '/mnt/scratch_dir/hidsa/DPMFA_output'
+    os.chdir(lin_main_folder)
+    outputbasefolder = outputbasefolder_lin
 
 # Define the "output" folder path
 output_folder = os.path.join(outputbasefolder, "output")

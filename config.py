@@ -9,8 +9,8 @@ Created on Mon May 15 09:30:27 2023
 inputfile = "MainInputFile_textile_update.xlsx"
 
 # Select operating system for folder structures (windows or linux)
-#OS_env = 'win' 
-OS_env = 'lin' 
+OS_env = 'win' 
+#OS_env = 'lin' 
 
 # Select the model type: dpmfa or pmfa
 #model_type = 'pmfa'
@@ -159,3 +159,29 @@ to_clothing_comps = [
     "T-shirts",
     "Underwear"]
 
+in_use_discarded_from_comps = [
+    "Clothing washed (in use)",
+    "Clothing washed (discarded)",
+    "Clothing rarely washed (in use)",
+    "Clothing rarely washed (discarded)",
+    "Clothing not washed (in use)",
+    "Clothing not washed (discarded)"    
+    ]
+
+in_use_discarded_to_comps = [
+    "Clothing waste collection",
+    "Mixed waste collection",
+    "Dumping",
+    "Clothing wearing",
+    "Clothing washing",
+    "Clothing drying"
+    ]
+
+washing_drying_from_comps = [
+    "Clothing washing",
+    "Clothing drying"]
+
+washing_drying_to_comps = [
+    "Mixed waste collection (micro)",
+    "Wastewater (micro)"
+    ]

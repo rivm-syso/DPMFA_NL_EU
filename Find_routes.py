@@ -18,14 +18,15 @@ import os
 from pathlib import Path
 import itertools
 import config
+import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+    os.chdir(win_main_folder)
     outputbasefolder = os.path.join(os.getcwd(), 'output')
 else: 
-    os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_NL_EU")
-    outputbasefolder = '/mnt/scratch_dir/hidsa/DPMFA_output/output' 
+    os.chdirlin_main_folder)
+    outputbasefolder = outputbasefolder_lin + '/output' 
 
 #%%
 # FUNCTIONS

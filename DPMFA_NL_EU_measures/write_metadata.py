@@ -7,14 +7,15 @@ Created on Tue Mar 12 08:02:07 2024
 
 import os
 import config
+import paths
 
 inputfile = "Fringes_low"
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win': 
-    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+    os.chdir(win_main_folder)
 else:
-    os.chdir('/mnt/scratch_dir/hidsa/DPMFA_output')  
+    os.chdir(outputbasefolder_lin)  
 
 import datetime
 

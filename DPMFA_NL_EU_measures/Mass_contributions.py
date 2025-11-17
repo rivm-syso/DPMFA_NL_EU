@@ -9,7 +9,7 @@ import pandas as pd
 import pickle
 import os
 import csv
-
+import paths
 import config
 
 inputfile = "Fringes_low"
@@ -17,11 +17,11 @@ outputfoldername = "output_" + inputfile
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir("N:/Documents/GitHub/DPMFA_Analysis/DPMFA_NL_EU_measures")
+    os.chdir(win_main_folder)
     outputbasefolder = os.getcwd()
 else: 
-    os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_Analysis/DPMFA_Analysis/DPMFA_NL_EU_measures")
-    outputbasefolder = '/mnt/scratch_dir/hidsa/DPMFA_output'
+    os.chdir(lin_main_folder)
+    outputbasefolder = outputbasefolder_lin
 
 # Define the "output" folder path
 output_folder = os.path.join(outputbasefolder, outputfoldername)

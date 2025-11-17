@@ -7,6 +7,7 @@ import config
 
 mat = "Acryl"
 
+
 outputbasefolder = 'S:\\BioGrid\\hidsa\\DPMFA_output\\output_Baseline_EU_23_7-2025'
 
 sources = ["Clothing (product sector)", # This compartment is not an input compartment, but gets inflow from import and production 

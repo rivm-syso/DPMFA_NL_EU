@@ -2,7 +2,7 @@
 """
 Created on Mon Apr 14 09:45:24 2025
 
-@author: hidsa
+
 """
 
 # -*- coding: utf-8 -*-
@@ -20,12 +20,13 @@ Created on 09.04.2020
 
 import os
 import config
+import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU")
+    os.chdir(win_main_folder)
 else: 
-    os.chdir("/data/BioGrid/hidsa/GitHub/DPMFA_NL_EU")
+    os.chdir(lin_main_folder)
 
 import csv
 import numpy as np
@@ -52,7 +53,7 @@ if config.OS_env == 'win':
     outputbasefolder = mainfolder
 else:
     inputfolder = "./input/" + reg + "/"
-    outputbasefolder = '/data/BioGrid/hidsa/DPMFA_output'  
+    outputbasefolder = outputbasefolder_lin  
 
 db_name = reg + ".db" 
 

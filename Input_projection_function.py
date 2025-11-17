@@ -2,7 +2,7 @@
 """
 Created on Tue Dec  3 10:45:15 2024
 
-@author: hidsa
+
 """
 # From the excel maininput file, reads the Input_NL or Input_EU sheet. 
 # The sheets each contain the columns 'Compartment', 'Year', 'Material', 
