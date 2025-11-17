@@ -5,7 +5,8 @@ library(readxl)
 library(writexl)
 
 # Set working directory
-setwd("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update")
+# Define the path to the Input_update folder below
+setwd("Textile_input_update")
 
 # Load functions
 source('Input_update_functions.R')
@@ -19,16 +20,16 @@ input_data_source <- "https://ec.europa.eu/eurostat/databrowser/view/DS-056120__
 #### Calculate the total textile consumption per year for NL and EU
 
 # Read in the import, export, production and unit data
-import <- read_data("PRODCOM/Import.csv") |>
+import <- read_data("Raw_data_input_update/PRODCOM_clothing/Import.csv") |>
   rename(Import = Value)
-export <- read_data("PRODCOM/Export.csv") |>
+export <- read_data("Raw_data_input_update/PRODCOM_clothing/Export.csv") |>
   rename(Export = Value)
-production <- read_data("PRODCOM/Production.csv") |>
+production <- read_data("Raw_data_input_update/PRODCOM_clothing/Production.csv") |>
   rename(Production = Value)
-units <- read_data("PRODCOM/Units.csv") |>
+units <- read_data("Raw_data_input_update/PRODCOM_clothing/Units.csv") |>
   rename(Unit = Value)
 
-st_kg <- read_excel("PRODCOM/ST_to_KG.xlsx")
+st_kg <- read_excel("Raw_data_input_update/PRODCOM_clothing/ST_to_KG.xlsx")
 
 # Merge the data into one df
 clothing_merged <- import |>
@@ -71,7 +72,7 @@ clothing_converted <- clothing_merged |>
 #### Calculate the fraction of synthetic textiles from the total consumption
 
 # Read and transpose the fractions for apparel
-apparel_mat_fractions <- read_excel("Material_composition_Quantis.xlsx", sheet = 1) |>
+apparel_mat_fractions <- read_excel("Raw_data_input_update/Material_composition_Quantis.xlsx", sheet = 1) |>
   slice(3:n()) |>
   pivot_longer(-`List of materials`, names_to = "Category", values_to = "Fraction") |>
   pivot_wider(names_from = `List of materials`, values_from = "Fraction")
@@ -80,7 +81,7 @@ colnames(apparel_mat_fractions) <- colnames(apparel_mat_fractions) |>
   str_replace_all(" ", "_") 
 
 # Read and transpose the fractions for footwear
-footwear_mat_fractions <- read_excel("Material_composition_Quantis.xlsx", sheet = 2) |>
+footwear_mat_fractions <- read_excel("Raw_data_input_update/Material_composition_Quantis.xlsx", sheet = 2) |>
   slice(3:n()) |>
   pivot_longer(-`List of materials`, names_to = "Category", values_to = "Fraction") |>
   pivot_wider(names_from = `List of materials`, values_from = "Fraction")
@@ -89,10 +90,10 @@ colnames(footwear_mat_fractions) <- colnames(footwear_mat_fractions) |>
   str_replace_all(" ", "_") 
 
 # Read in the material categories for apparel
-apparel_mat_categories <- read_excel("Apparel_material_categories.xlsx")
+apparel_mat_categories <- read_excel("Raw_data_input_update/Apparel_material_categories.xlsx")
 
 # Read in the material categories for footwear
-footwear_mat_categories <- read_excel("Footwear_material_categories.xlsx")
+footwear_mat_categories <- read_excel("Raw_data_input_update/Footwear_material_categories.xlsx")
 
 # Add a column to the clothing_converted df to specify if the category is apparel or footwear
 clothing_converted <- clothing_converted |>

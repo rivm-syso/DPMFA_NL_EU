@@ -10,9 +10,7 @@ env = "win"
 
 ################################ Load data #####################################
 # when working from DWO, we can use:
-#data_folder <- "/rivm/n/hidsa/Documents/DPMFA_textiel/Output_backup/output_28_7"
-data_path <- "/rivm/biogrid/hidsa/DPMFA_output"
-#data_path <- "~/my_scratch_dir/DPMFA_output"
+data_path <- "path_to_csv_output_folder"
 
 folder_name <- "Baseline_EU_v3"
 

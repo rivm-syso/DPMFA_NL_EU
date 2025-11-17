@@ -47,7 +47,7 @@ if config.OS_env == 'win':
     outputbasefolder = mainfolder
 else:
     inputfolder = "./input/" + reg + "/"
-    outputbasefolder = '/mnt/scratch_dir/quikj/DPMFA_output/Baseline_EU'  
+    outputbasefolder = outputbasefolder_lin  
 
 db_name = reg + "_" + sel + ".db" 
 

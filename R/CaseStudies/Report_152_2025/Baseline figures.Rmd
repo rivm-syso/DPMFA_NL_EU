@@ -8,10 +8,9 @@ editor_options:
 library(tidyverse)
 library(ggplot2)
 
-data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output"
-#data_folder <- "~/my_biogrid/Rdata_files"
+data_folder <- "Data"
 
-selectyear <- 2050
+selectyear <- 2022
 ```
 
 # Define parameters
@@ -100,8 +99,6 @@ sink_compartments <- c("Agricultural soil",
 # Load data
 ```{R}
 data_name <- "Baseline_EU_v3"
-# 
-# load(paste0(data_folder, "/DPMFA_calculated_mass_flows_NL", data_name, ".RData"))
 
 load(paste0(data_folder, "/DPMFA_calculated_mass_flows_", data_name ,"_years_of_interest.RData"))
 

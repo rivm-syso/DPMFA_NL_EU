@@ -10,12 +10,8 @@ env = "win"
 
 ################################ Load data #####################################
 # when working from DWO, we can use:
-#data_folder <- "/rivm/n/hidsa/Documents/DPMFA_textiel/Output_backup/output_28_7"
-data_folder <- "~/my_biogrid/DPMFA_output/Baseline_EU"
-#data_folder <- "/rivm/n/hidsa/Documents/GitHub/rivm-syso/DPMFA_NL_EU/output"
-#data_folder <- "S:/BioGrid/hidsa/DPMFA_output/output_PMFA_2010_2025_10000_maininput_30_4/"
-#data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_output/output_7_3_2024"
-#setwd("/rivm/n/hidsa/Documents/DPMFA_output_backup/DPMFA_NL_10000/")
+data_folder <- "path_to_csv_output_folder"
+
 setwd(data_folder)
 
 # Get csv file paths

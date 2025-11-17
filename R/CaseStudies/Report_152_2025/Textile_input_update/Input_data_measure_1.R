@@ -10,10 +10,12 @@ low_scenario_max <- 0.009508
 high_scenario_min <- 0.75
 high_scenario_max <- 1
 
-# Get the mass per year per scale per category
-clothing_converted <- readRDS("Textile_input_update/clothing_converted.RDS")
+setwd("Textile_input_update")
 
-input_data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update/"
+# Get the mass per year per scale per category
+clothing_converted <- readRDS("clothing_converted.RDS")
+
+input_data_folder <- "Raw_data_input_update/"
 
 # Read and transpose the fractions for apparel
 apparel_mat_fractions <- read_excel(paste0(input_data_folder, "Material_composition_Quantis.xlsx"), sheet = 1) |>
@@ -567,5 +569,5 @@ writeData(wb, sheet = "Calculated_TCs_NL_high", Consumption_to_categories_TCs_NL
 writeData(wb, sheet = "Import_export_production_NL_h", Import_Export_Production_NL)
 
 # Save the workbook to a file
-saveWorkbook(wb, "Textile_input_update/Calculated_input_and_TCs_Measure_1.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "Calculated_input_and_TCs_Measure_1.xlsx", overwrite = TRUE)
 

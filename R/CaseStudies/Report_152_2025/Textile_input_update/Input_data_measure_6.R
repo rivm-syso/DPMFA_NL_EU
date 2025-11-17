@@ -11,10 +11,10 @@ high_scenario_min <- 0.75
 high_scenario_max <- 1
 
 # Get the mass per year per scale per category
-All_import_export_production <- readRDS("Textile_input_update/Mass_per_category.RDS")
+All_import_export_production <- readRDS("Mass_per_category.RDS")
 
 # Get the lifetimes
-lifetimes <- read_xlsx("Textile_input_update/Calculated_input_and_TCs.xlsx", sheet = "Lifetimes") |>
+lifetimes <- read_xlsx("Calculated_input_and_TCs.xlsx", sheet = "Lifetimes") |>
   mutate(Years_extended = Years + 1) |>
   select(-Source)
 
@@ -311,4 +311,4 @@ writeData(wb, sheet = "TCs_high", Consumption_to_categories_TCs_NL)
 writeData(wb, sheet = "Input_high", Import_Export_Production_NL)
 
 # Save the workbook to a file
-saveWorkbook(wb, "Textile_input_update/Calculated_input_and_TCs_measure_6.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "Calculated_input_and_TCs_measure_6.xlsx", overwrite = TRUE)

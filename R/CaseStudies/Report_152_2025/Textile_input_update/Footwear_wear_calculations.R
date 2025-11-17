@@ -6,11 +6,13 @@ library(ggplot2)
 library(readxl)
 library(openxlsx)
 
+setwd("Textile_input_update")
+
 # Set working directory
-input_data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update/"
+input_data_folder <- "Raw_data_input_update/"
 
 # Load functions
-source('Textile_input_update/Input_update_functions.R')
+source('Input_update_functions.R')
 
 # Specify uncertainty fraction for high/low estimates 
 uncertainty_fraction <- 0.10 
