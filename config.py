@@ -6,7 +6,7 @@ Created on Mon May 15 09:30:27 2023
 """
 
 # Input file
-inputfile = "MainInputFile_textile_update.xlsx"
+inputfile = "MainInputFile.xlsx"
 
 # Select operating system for folder structures (windows or linux)
 OS_env = 'win' 
@@ -29,7 +29,7 @@ endyear = 2050
 
 #  Running variables
 Speriod = 3 # special period for detailed output printing
-RUNS = 10000 # number of runs 
+RUNS = 10 # number of runs 
 
 seed = 2250 
 nodatayear  = 1950 # year for which no data is available, needed for interpolation (has to be smaller than startyear)
