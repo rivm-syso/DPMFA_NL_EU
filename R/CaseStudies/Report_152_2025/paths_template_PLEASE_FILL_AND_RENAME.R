@@ -6,13 +6,13 @@
 csv_path <- ""
 
 # The path to the folder where the RData files made from the csvs generated with the DPMFA_NL_EU model are located
-output_path <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output"
+output_path <- ""
 
 # The path to the folder where the RData files made from the csvs generated with the DPMFA_NL_EU model are located -- when working in linux
-output_path_lin <- "~/my_biogrid/DPMFA_output/DPMFA_output"
+output_path_lin <- ""
 
 # The path where figures should be saved to
-figures_path <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures"
+figures_path <- ""
 
 # The path where tables should be saved to
-tables_path <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Tables"
+tables_path <- ""
