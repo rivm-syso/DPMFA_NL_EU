@@ -13,9 +13,9 @@ import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir(win_main_folder)
+    os.chdir(paths.win_main_folder)
 else: 
-    os.chdir(lin_main_folder)
+    os.chdir(paths.lin_main_folder)
     
 mainfolder = os.getcwd()
 

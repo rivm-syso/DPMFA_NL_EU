@@ -22,11 +22,11 @@ import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir(win_main_folder)
-    outputbasefolder = sankey_output_folder_win
+    os.chdir(paths.win_main_folder)
+    outputbasefolder = paths.sankey_output_folder_win
 else: 
-    os.chdir(lin_main_folder)
-    outputbasefolder = sankey_output_folder_lin 
+    os.chdir(paths.lin_main_folder)
+    outputbasefolder = paths.sankey_output_folder_lin 
 
 #%%
 # FUNCTIONS

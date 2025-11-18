@@ -24,9 +24,9 @@ import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir(win_main_folder)
+    os.chdir(paths.win_main_folder)
 else: 
-    os.chdir(lin_main_folder)
+    os.chdir(paths.lin_main_folder)
 
 import csv
 import numpy as np
@@ -53,7 +53,7 @@ if config.OS_env == 'win':
     outputbasefolder = mainfolder
 else:
     inputfolder = "./input/" + reg + "/"
-    outputbasefolder = outputbasefolder_lin  
+    outputbasefolder = paths.outputbasefolder_lin  
 
 db_name = reg + ".db" 
 

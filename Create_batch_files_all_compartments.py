@@ -10,8 +10,15 @@ import shutil
 import fileinput
 import pandas as pd
 import config
+import paths
 
 region = config.reg
+
+# Define where the repository is located
+if config.OS_env == 'win':
+    main_folder = paths.win_main_folder
+else: 
+    main_folder = paths.lin_main_folder
 
 if config.OS_env == 'win': 
     csv_name = ".\\input\\" + region + "\\Materials.csv"
@@ -40,14 +47,6 @@ for i in df.index:
                 print(j)
             else:
                 print(line, end='')
-            
-    # with fileinput.FileInput(dest, inplace=True) as file:
-    #     for line in file:
-    #         if line.startswith("sel"):
-    #             j = 'sel = "' + df['sel'][i] + '"'
-    #             print(j)
-    #         else:
-    #             print(line, end='')
 
 print("Writing batch files done...")
 
@@ -62,14 +61,14 @@ if config.OS_env == 'win':
     file_name = 'activate.bat'
 
     # Specify on which computer disk this file can be found
-    programs_path = 'C:/' # AH: Verander naar de schijf waar programma's worden geïnstalleerd op jouw computer!
+    programs_path = 'C:/' # Change to location where files are installed on your computer
 
     # Find the file        
     activate_file_path = find('activate.bat', programs_path)
     activate_file_path = '"' + activate_file_path + '"'
 
     # Change the directory to where we can find the CaseStudy_Runner files
-    os.chdir("N:/Documents/GitHub/rivm-syso/DPMFA_NL_EU") # AH: Verander naar de GitHub/DPMFA map of je computer
+    os.chdir(main_folder) 
     filedir = os.getcwd() 
 
     # Get the path to write_metadata.py

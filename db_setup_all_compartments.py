@@ -18,7 +18,6 @@ import os
 import config
 import pandas as pd
 import sqlite3
-import shutil
 
 # Fetch configurations
 reg = config.reg

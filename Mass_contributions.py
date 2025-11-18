@@ -15,11 +15,11 @@ import paths
 
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
-    os.chdir(win_main_folder)
+    os.chdir(paths.win_main_folder)
     outputbasefolder = os.getcwd()
 else: 
-    os.chdir(lin_main_folder)
-    outputbasefolder = outputbasefolder_lin
+    os.chdir(paths.lin_main_folder)
+    outputbasefolder = paths.outputbasefolder_lin
 
 # Define the "output" folder path
 output_folder = os.path.join(outputbasefolder, "output")
