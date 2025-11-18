@@ -4,13 +4,14 @@
 # Load packages 
 library(tidyverse)
 library(readr)
+source("paths.R")
 
 env = "win"
 #env = "lin"
 
 ################################ Load data #####################################
 # when working from DWO, we can use:
-data_folder <- "path_to_csv_output_folder"
+data_folder <- csv_path
 
 setwd(data_folder)
 
@@ -100,9 +101,9 @@ DPMFA_calculatedMassFlow <-
 
 ################################### save #######################################
 if(env == "win"){
-  data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output"
+  data_folder <- output_path
 } else {
-  data_folder <- "~/my_biogrid/DPMFA_output/DPMFA_output"
+  data_folder <- output_path_lin
 }
 
 if (modeltype == "dpmfa"){

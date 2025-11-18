@@ -14,9 +14,9 @@ The input for this script are RData files for each run of the DPMFA model, e.g. 
 ```{R Prepare data, include=FALSE}
 
 library(tidyverse)
-
+source("paths.R")
 ### For reading in DPMFA outout
-data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output/"
+data_folder <- paste0(output_path, "/")
 ### Tag for naming output file
 out_date <- "20251015"
 
@@ -90,8 +90,7 @@ TestDataPart1 <- PrepData(measure_names =
                             c("Baseline_NL_v3_uncertainty_test_2",
                            "Baseline_NL_v3_uncertainty_test_3"),
          Baseline = "Baseline_NL_v3_uncertainty_test_1",
-         data_folder = 
-           "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output/",
+         data_folder = data_folder,
          source_compartments = source_compartments,
          sink_compartments = sink_compartments)
 
@@ -99,8 +98,7 @@ TestDataPart2 <- PrepData(measure_names =
                             c("Baseline_NL_v3_uncertainty_test_1",
                            "Baseline_NL_v3_uncertainty_test_3"),
          Baseline = "Baseline_NL_v3_uncertainty_test_2",
-         data_folder = 
-           "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output/",
+         data_folder = data_folder,
          source_compartments = source_compartments,
          sink_compartments = sink_compartments)
 

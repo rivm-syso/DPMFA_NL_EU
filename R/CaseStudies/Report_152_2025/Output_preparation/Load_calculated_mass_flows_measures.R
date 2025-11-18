@@ -4,6 +4,7 @@
 # Load packages 
 library(tidyverse)
 library(readr)
+source("paths.R")
 
 env = "win"
 #env = "lin"
@@ -110,22 +111,22 @@ DPMFA_calculatedMassFlow <-
 
 ################################### save #######################################
 if(env == "win"){
-  data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output"
+  data_folder <- output_path
 } else {
-  data_folder <- "~/my_biogrid/DPMFA_output/DPMFA_output"
+  data_folder <- output_path_lin
 }
 
-# if (modeltype == "dpmfa"){
-#   save(DPMFA_calculatedMassFlow, metadata,
-#        file = paste0(data_folder,"/DPMFA_calculated_mass_flows_", folder_name,".RData"),
-#        compress = "xz",
-#        compression_level = 9)   
-# } else {
-#   save(DPMFA_calculatedMassFlow, metadata,
-#        file = paste0(data_folder,"/PMFA_calculated_mass_flows_", folder_name,".RData"),
-#        compress = "xz",
-#        compression_level = 9)  
-# }
+if (modeltype == "dpmfa"){
+  save(DPMFA_calculatedMassFlow, metadata,
+       file = paste0(data_folder,"/DPMFA_calculated_mass_flows_", folder_name,".RData"),
+       compress = "xz",
+       compression_level = 9)
+} else {
+  save(DPMFA_calculatedMassFlow, metadata,
+       file = paste0(data_folder,"/PMFA_calculated_mass_flows_", folder_name,".RData"),
+       compress = "xz",
+       compression_level = 9)
+}
 
 ########################## save data only for years of interest #######################
 

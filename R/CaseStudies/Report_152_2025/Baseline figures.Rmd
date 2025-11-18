@@ -8,6 +8,8 @@ editor_options:
 library(tidyverse)
 library(ggplot2)
 
+source("paths.R")
+
 data_folder <- "Data"
 
 selectyear <- 2022
@@ -393,7 +395,7 @@ data_relocated_recycling_to_sinks <- data_relocated_recycling |>
 ```
 
 ```{r initFig}
-figure_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures"
+figure_folder <- figures_path
 
 # Define colors for groups source_colors["Macroplastic"]
 source_colors <- c(
@@ -774,6 +776,7 @@ ggsave(paste0("Water_plot_", data_name,"_", as.character(selectyear), ".png"),
 ```
 Make summary table of Clothing and Footwear summed to sinks
 ```{R}
+tables_folder <- tables_path
 # Clothing
 summary_table_clothing <- PMFA_NL_new |>
   filter(From_compartment %in% clothing_category_compartments) |>
@@ -817,7 +820,7 @@ summary_table_footwear <- summary_table_footwear |>
 
 table4 <- rbind(summary_table_clothing, summary_table_footwear)
 
-write.xlsx(table4, paste0("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Tables/Table4_", data_name, ".xlsx"))
+write.xlsx(table4, paste0(tables_folder, "/Table4_", data_name, ".xlsx"))
 ```
 
 # Make table comparing emissions to environmental sinks to emissions to other sinks
@@ -874,5 +877,5 @@ summary_table_footwear <- summary_table_footwear |>
 
 table <- rbind(summary_table_clothing, summary_table_footwear)
 
-write.xlsx(table, paste0("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Tables/Table_mass_and_percentages_to_sinks_", data_name, ".xlsx"))
+write.xlsx(table, paste0(tables_folder, "/Table_mass_and_percentages_to_sinks_", data_name, ".xlsx"))
 ```

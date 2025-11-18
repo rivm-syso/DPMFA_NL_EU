@@ -14,6 +14,9 @@ The input for this script are RData files for each run of the DPMFA model, e.g. 
 ```{R Prepare raw data, include=FALSE}
 
 library(tidyverse)
+source("paths.R")
+
+data_folder <- paste0(output_path, "/")
 
 ### Tag for naming output file
 out_date <- "20251017"
@@ -69,9 +72,6 @@ Measure_names <- c("Fringes_low",
                    "Recycling_low",
                    "Recycling_high",
                    
-                   # "Indoor_air_filter_low",
-                   # "Indoor_air_filter_high",
-                   
                    "Prewashing_low",
                    "Prewashing_high",
                    
@@ -102,17 +102,15 @@ Measure_names <- c("Fringes_low",
                    "Lifetime_low",
                    "Lifetime_high")
 
-Clothing_data_all <- PrepData(data_folder = 
-                                "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output/",
+Clothing_data_all <- PrepData(data_folder = data_folder,
                               Baseline = "Baseline_NL_v3",
                               measure_names = Measure_names,
                               source_compartments = Source_compartments,
                               sink_compartments = Sink_compartments)
 
 saveRDS(Clothing_data_all, 
-        file = paste0("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output/",
+        file = paste0(data_folder,
                       out_date,"_ClothingDataAll.rds"))
-
 
 ```
 
@@ -123,7 +121,7 @@ If the above script was run and the outsaved to an rds file, best to read in tha
 ```{r Read in data}
 library(tidyverse)
 
-Clothing_data_all <- readRDS(paste0("/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Output/20251014_ClothingDataAll.rds"))
+Clothing_data_all <- readRDS(paste0(data_folder, "20251014_ClothingDataAll.rds"))
 
 #### Some required strings to help:
 # NotSource <- c("Clothing (product sector)", "Clothing waste collection", "Home textile waste collection",         "Household textiles (product sector)", 
@@ -167,8 +165,6 @@ TEMPORARY FIX for superficial error Replace was Run with config scale set to EU,
 Clothing_data_all <-
   Clothing_data_all |> mutate(Scale = str_replace_all(Scale, "EU", "NL"))
 
-
-
 ```
 
 # Measure effects - Overview
@@ -181,7 +177,7 @@ First we analyse the effect of all mitigation measures based on summing of all P
 
 ```{r Calculations and figures}
 Analysistag <- "20251017"
-figure_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures/Mitigation_measures"
+figure_folder <- paste0(figures_path, "/Mitigation_measures")
 
 ClothingStatsOverview <- FunPrepStatsALL(Clothing_data_all = Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
                          SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
@@ -1112,12 +1108,6 @@ Clothing_data_summed_over_pol <- Clothing_data_all_long |>
 ```
 
 Make violin plots
-
-```{R Create theme}
-figure_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures/Mitigation_measures"
-
-
-```
 
 ```{R Specify the order of measures}
 

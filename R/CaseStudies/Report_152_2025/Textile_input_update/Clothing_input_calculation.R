@@ -8,8 +8,8 @@ library(ggplot2)
 library(readxl)
 library(openxlsx)
 
-# Set working directory
-input_data_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update/"
+# Define path to raw data
+input_data_folder <- "Textile_input_update/Raw_data_input_update/"
 
 # Load functions
 source('Textile_input_update/Input_update_functions.R')
@@ -438,7 +438,6 @@ writeData(wb, sheet = "Import_export_production_EU", Import_Export_Production_EU
 
 # Save the workbook to a file
 saveWorkbook(wb, "Textile_input_update/Calculated_input_and_TCs.xlsx", overwrite = TRUE)
-saveWorkbook(wb, "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Input_update/Calculated_input_and_TCs.xlsx", overwrite = TRUE)
 
 # Figure of distribution of consumption
 
@@ -469,7 +468,7 @@ plot_data <- All_import_export_production |>
 
 library(ggplot2)
 
-figure_folder <- "/rivm/r/E121554 LEON-T/03 - uitvoering WP3/DPMFA_textiel/Figures"
+figure_folder <- "Textile_input_update/Figures"
 
 plot_theme = theme(
   axis.title.x = element_text(size = 12),
