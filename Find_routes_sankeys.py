@@ -121,11 +121,6 @@ for mat in materials:
     # Step 5: Create a DataFrame with Source and Target compartments
     df_clothing_combos = pd.DataFrame(clothing_to_in_use_disc_combinations, columns=["Source compartment", "Target compartment"])
     df_sink_combos = pd.DataFrame(in_use_disc_to_sinks_combinations, columns=["Source compartment", "Target compartment"])
-
-    #df_clothing_to_in_use_combos = pd.DataFrame(clothing_to_in_use_combinations, columns=["Source compartment", "Target compartment"])
-    #df_in_use_discarded_combos = pd.DataFrame(in_use_discarded_combinations, columns=["Source compartment", "Target compartment"])
-    #df_washing_drying_combos = pd.DataFrame(washing_drying_combinations, columns=["Source compartment", "Target compartment"])
-    #df_in_use_discarded_to_sinks = pd.DataFrame(in_use_discarded_to_sinks, columns=["Source compartment", "Target compartment"])
     
     df_source_target_combos = pd.concat([df_clothing_combos, df_sink_combos], axis=0, ignore_index=True)
         

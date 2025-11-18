@@ -15,7 +15,7 @@ import config
 in_use_discarded_comps = config.in_use_discarded_to_comps
 sink_comps = config.sink_comps
 kleding_comps = config.to_clothing_comps
-#kleding_comps = ["Apparel accessories"]
+
 # Set working directory to where the scripts are located
 if config.OS_env == 'win':
     os.chdir(paths.win_main_folder)
@@ -65,9 +65,6 @@ def find_routes(df_from_to, source, target, visited=None):
     return routes
 
 #%% 
-#materials = ["Acryl"]
-#mat = "PET"
-
 # Calculate masses in loop
 for mat in materials:
     

@@ -176,12 +176,3 @@ in_use_discarded_to_comps = [
     "Clothing washing",
     "Clothing drying"
     ]
-
-washing_drying_from_comps = [
-    "Clothing washing",
-    "Clothing drying"]
-
-washing_drying_to_comps = [
-    "Mixed waste collection (micro)",
-    "Wastewater (micro)"
-    ]
