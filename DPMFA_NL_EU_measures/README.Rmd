@@ -1,12 +1,12 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12636554.svg)](https://doi.org/10.5281/zenodo.12636554)
+---
+title: "DPMFA_NL_EU_measures"
+output: github_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
 
-Dynamic probabilistic material flow analysis (DPMFA) model for the
-Netherlands and the EU. Based on code by EMPA and data in collaboration
-with TNO.
-
-Author: Institute of Public Health and the Environment (RIVM)
-
-# Description
+# README
 
 The model in this (DPMFA_NL_EU/DPMFA_NL_EU_measures) folder is nearly the same 
 model as the model in the DPMFA_NL_EU folder, with one important difference: 

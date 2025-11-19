@@ -4,10 +4,11 @@ README
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12636554.svg)](https://doi.org/10.5281/zenodo.12636554)
 
 Dynamic probabilistic material flow analysis (DPMFA) model for the
-Netherlands and the EU. Based on code by EMPA and data in collaboration
-with TNO.
+Netherlands and the EU. Based on [RIVM report
+2024-0106](https://dx.doi.org/10.21945/rivm-2024-0106).
 
-Author: Institute of Public Health and the Environment (RIVM)
+Author: National Institute for Public Health and the Environment
+([RIVM](https://www.rivm.nl/en))
 
 # Model description
 
@@ -16,6 +17,9 @@ certain product groups and polymers to the environment. The input needed
 to run the model is present in MainInputfile.xlsx. The plastic emissions
 to environmental sinks are calculated over time and probabilistically by
 using Monte Carlo simulations.
+
+A new implementation aimed at comparing different scenarios can be found
+in the [DPMFA_NL_EU_measures](DPMFA_NL_EU_measures/README.md) subfolder.
 
 # Dependencies
 
