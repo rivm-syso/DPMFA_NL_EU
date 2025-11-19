@@ -1,0 +1,1282 @@
+---
+title: "Mitigation_measures_figures"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Step 1: Prepare data file with output statistics
+
+A very large tibble is created based on the combining output from all mitigation measures for the low and high scenario's. This includes all the 10.000 monte carlo RUNs for three years resulting in `Clothing_data_all`. Best to use an environment that has 64G memory.
+
+The input for this script are RData files for each run of the DPMFA model, e.g. for the baseline or mitigation measure scenario as created using the `xScriptNamexx.R`.
+
+```{R Prepare raw data, include=FALSE}
+
+library(tidyverse)
+source("paths.R")
+
+data_folder <- paste0(output_path, "/")
+
+### Tag for naming output file
+out_date <- "20251017"
+
+#### selection ####
+Sink_compartments <- c("Agricultural soil",
+                       "Natural soil",
+                       "Residential soil",
+                       "Road side soil",
+                       "Surface water",
+                       "Outdoor air",
+                       "Sub-surface soil",
+                       "Sea water",
+                       "Landfill",
+                       "Elimination",
+                       "Export",
+                       "Secondary material reuse",
+                       "Plastic products",
+                       "Export of primary plastics",
+                       "Textile reuse",
+                       "Footwear reuse")
+
+source_compartments <- c( "Apparel accessories",
+                          "Clothing waste collection",
+                          "Home textile waste collection", 
+                          "Household textiles (product sector)", 
+                          "Jackets and coats",                    
+                          "Leggings stockings tights and socks", 
+                          "Manufacturing of clothing",       
+                          "Sweaters and midlayers"  ,             
+                          "Technical textile waste collection",  
+                          "Technical textiles",                  
+                          "Textile recycling",                  
+                          "Wastewater (micro)",                   
+                          "Wastewater (macro)",                   
+                          "Boots"        ,                  
+                          "Closed-toed shoes"     ,         
+                          "Dresses skirts and jumpsuits"   ,  
+                          "Footwear waste collection" ,
+                          "Open-toed shoes"   ,           
+                          "Pants and shorts"    ,       
+                          "Shirts and blouses"     ,    
+                          "Swimwear" ,                            
+                          "T-shirts" ,                 
+                          "Underwear"  )
+
+Measure_names <- c("Fringes_low",
+                   "Fringes_high",
+                   
+                   "Wastewater_low",
+                   "Wastewater_high",
+                   
+                   "Recycling_low",
+                   "Recycling_high",
+                   
+                   "Prewashing_low",
+                   "Prewashing_high",
+                   
+                   "Replace_low",
+                   "Replace_high",
+                   
+                   "Washer_dryer_filters_low",
+                   "Washer_dryer_filters_high",
+                   
+                   "Clean_dryer_filter_low",
+                   "Clean_dryer_filter_high",
+                   
+                   "External_filter_low",
+                   "External_filter_high",
+                   
+                   "Vacuuming_low",
+                   "Vacuuming_high",
+                   
+                   "Production_method_finishes_low",
+                   "Production_method_finishes_high",
+                   
+                   "Delicate_washing_cycle_low",
+                   "Delicate_washing_cycle_high",
+                   
+                   "Clothesline_instead_of_dryer_low",
+                   "Clothesline_instead_of_dryer_high",
+                   
+                   "Lifetime_low",
+                   "Lifetime_high")
+
+Clothing_data_all <- PrepData(data_folder = data_folder,
+                              Baseline = "Baseline_NL_v3",
+                              measure_names = Measure_names,
+                              source_compartments = Source_compartments,
+                              sink_compartments = Sink_compartments)
+
+saveRDS(Clothing_data_all, 
+        file = paste0(data_folder,
+                      out_date,"_ClothingDataAll.rds"))
+
+```
+
+# Analysis of results
+
+If the above script was run and the outsaved to an rds file, best to read in that one, using e.g. ("Output/20251017_ClothingDataAll.rds").
+
+```{r Read in data}
+library(tidyverse)
+
+Clothing_data_all <- readRDS(paste0(data_folder, "20251014_ClothingDataAll.rds"))
+
+#### Some required strings to help:
+# NotSource <- c("Clothing (product sector)", "Clothing waste collection", "Home textile waste collection",         "Household textiles (product sector)", 
+#                "Manufacturing of clothing", "Technical textile waste collection",    "Technical textiles",                    "Textile recycling",                     "Wastewater (micro)",                   
+#                "Wastewater (macro)", "Footwear waste collection")
+
+
+# ProductSector <- "Clothing (product sector)" # Don't use!
+ClothingSources <- c( "Apparel accessories",
+                      "Jackets and coats",                    
+                      "Leggings stockings tights and socks",  
+                      "Sweaters and midlayers"  ,  
+                      "Dresses skirts and jumpsuits"   ,              
+                      "Pants and shorts"    ,                 
+                      "Shirts and blouses"     ,               
+                      "Swimwear" ,                            
+                      "T-shirts" ,                            
+                      "Underwear"  )
+
+ShoesSources <- c("Open-toed shoes"   ,  
+                  "Boots"        ,                         
+                  "Closed-toed shoes")
+
+
+# EnvironmentalCompartments <- c("Agricultural soil",
+                       # "Natural soil",
+#                        "Residential soil",
+#                        "Road side soil",
+#                        "Surface water",
+#                        "Outdoor air",
+#                        "Sub-surface soil",
+#                        "Sea water")
+
+
+
+```
+
+TEMPORARY FIX for superficial error Replace was Run with config scale set to EU, while the model input etc. was already prepared for NL. So it is just the naming. TODO: in further setup of this pipeline make this dependant on the actual input used in DPMFA, not just the string in the config which can change between preparing input and running the model!
+
+```{r fix}
+Clothing_data_all <-
+  Clothing_data_all |> mutate(Scale = str_replace_all(Scale, "EU", "NL"))
+
+```
+
+# Measure effects - Overview
+
+## Clothing
+
+There is a need to create summaries for the correct aggregation of the data. E.g. all emissions going to environment, or just to soil or water. To do this a helper function is created.
+
+First we analyse the effect of all mitigation measures based on summing of all Polymers, Micr/Macro-plastics, Clothing sources and environmental sinks. This is for preparing the main overview figure.
+
+```{r Calculations and figures}
+Analysistag <- "20251017"
+figure_folder <- paste0(figures_path, "/Mitigation_measures")
+
+ClothingStatsOverview <- FunPrepStatsALL(Clothing_data_all = Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+saveRDS(ClothingStatsOverview, file = "Mitigation_measures/AggrData/ClothingStatsOverview.rds")
+
+
+Figure6 <- 
+  PlotMeasureOverviewPercent(
+    MeasuresData = CalcClothOverviewEffect(
+      ClothingStatsOverview=ClothingStatsOverview
+    ),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = FALSE,
+    Scenario = "high",
+    ErrorMargin = 0.5
+  )
+
+Figure6Data <- 
+PlotMeasureOverviewPercent(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverview),
+  ReduceExclude = 100,
+  MeasOrdering = 'max',
+  PlotStats = c("Mean_mass_t", "zero"),
+  OutputData = TRUE,
+  Scenario = "high",
+  ErrorMargin = 1
+)
+ggsave(
+  paste0(Analysistag, "Figure6_ClothingEmissionReductionPercentHigh.png"),
+  plot = Figure6,
+  path = figure_folder,
+  width = 10,
+  height = 6
+)
+
+
+Figure8 <-
+PlotMeasureOverviewPercent(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverview),
+  ReduceExclude = 100,
+  MeasOrdering = 'max',
+  PlotStats = c("p25_t","p75_t","zero"),
+  OutputData = FALSE,
+  Scenario = "low",
+  ErrorMargin = 0.5
+)
+Figure8Data <-
+PlotMeasureOverviewPercent(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverview),
+  ReduceExclude = 100,
+  MeasOrdering = 'max',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = TRUE,
+  Scenario = "low",
+  ErrorMargin = 1
+)
+ggsave(
+  paste0(Analysistag, "Figure8_ClothingEmissionReductionPercentLow.png"),
+  plot = Figure8,
+  path = figure_folder,
+  width = 10,
+  height = 6
+)
+
+Figure7 <-
+PlotMeasureOverview(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverview),
+  ReduceExclude = -5,
+  MeasOrdering = 'min',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = FALSE,
+  Scenario = "high"
+)
+
+Figure7data <- 
+PlotMeasureOverview(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverview),
+  ReduceExclude = -15,
+  MeasOrdering = 'min',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = TRUE,
+  Scenario = "high"
+)
+
+Figure7data |> ungroup() |> 
+  group_by(scenario,statistics) |> 
+  summarise(Reduced = sum(`Reduced MassFlow (t)`))
+
+ggsave(
+  paste0(Analysistag, "Figure7_ClothingEmissionReductionPercent.png"),
+  plot = Figure7,
+  path = figure_folder,
+  width = 13,
+  height = 6
+)
+
+Figure9DataIn <- CalcClothOverviewEffect(ClothingStatsOverview) |> 
+  filter(Measure %in% c("Production method finishes",
+                        "Replace",
+                        "External filter",
+                        "Lifetime"))
+  
+Figure9 <-
+PlotMeasureOverview(
+  MeasuresData = Figure9DataIn,
+  ReduceExclude = 0,
+  MeasOrdering = 'max',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = FALSE,
+  Scenario = "low"
+)
+Figure9Data <-
+PlotMeasureOverview(
+  MeasuresData = Figure9DataIn,
+  ReduceExclude = 0,
+  MeasOrdering = 'max',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = TRUE,
+  Scenario = "low"
+)
+Figure9Data |> ungroup() |> 
+  group_by(scenario,statistics) |> 
+  summarise(Reduced = sum(`Reduced MassFlow (t)`))
+
+ggsave(
+  paste0(Analysistag, "Figure9_ClothingEmissionReductionPercentLow.png"),
+  plot = Figure9,
+  path = figure_folder,
+  width = 10,
+  height = 4
+)
+
+```
+
+## Footwear
+
+```{r Calcuations and figures}
+
+library(tidyverse)
+library(ggplot2)
+
+#### SHOES ####
+
+ShoesStatsOverview <- FunPrepStatsALL(Clothing_data_all = Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                                         SelectionSources = ShoesSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                                         SelectYear = 2050)
+
+saveRDS(ShoesStatsOverview, 
+        file = "Mitigation_measures/AggrData/ShoesStatsOverview.rds")
+
+Figure6 <- 
+  PlotMeasureOverviewPercent(
+    MeasuresData = CalcClothOverviewEffect(ShoesStatsOverview),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = FALSE,
+    Scenario = "high",
+    ErrorMargin = 0.5
+  )
+
+Figure6Data <- 
+  PlotMeasureOverviewPercent(
+    MeasuresData = CalcClothOverviewEffect(ShoesStatsOverview),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = TRUE,
+    Scenario = "high",
+    ErrorMargin = 1
+  )
+ggsave(
+  paste0(Analysistag, "Figure6_ShoesEmissionReductionPercentHigh.png"),
+  plot = Figure6,
+  path = figure_folder,
+  width = 10,
+  height = 6
+)
+
+Figure8 <-
+  PlotMeasureOverviewPercent(
+    MeasuresData = CalcClothOverviewEffect(ShoesStatsOverview),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("p25_t","p75_t","zero"),
+    OutputData = FALSE,
+    Scenario = "low",
+    ErrorMargin = 1
+  )
+Figure8Data <-
+  PlotMeasureOverviewPercent(
+    MeasuresData = CalcClothOverviewEffect(ShoesStatsOverview),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("p25_t","p75_t"),
+    OutputData = TRUE,
+    Scenario = "low",
+    ErrorMargin = 1
+  )
+ggsave(
+  paste0(Analysistag, "Figure8_ShoesEmissionReductionPercentLow.png"),
+  plot = Figure8,
+  path = figure_folder,
+  width = 10,
+  height = 6
+)
+
+
+Figure7 <-
+  PlotMeasureOverview(
+    MeasuresData = CalcClothOverviewEffect(ShoesStatsOverview),
+    ReduceExclude = -15,
+    MeasOrdering = 'min',
+    PlotStats = c("p25_t","p75_t"),
+    OutputData = FALSE,
+    Scenario = "high"
+  )
+
+Figure7data <- 
+  PlotMeasureOverview(
+    MeasuresData = CalcClothOverviewEffect(ShoesStatsOverview),
+    ReduceExclude = -15,
+    MeasOrdering = 'min',
+    PlotStats = c("p25_t","p75_t"),
+    OutputData = TRUE,
+    Scenario = "high"
+  )
+
+Figure7data |> ungroup() |> 
+  group_by(scenario,statistics) |> 
+  summarise(Reduced = sum(`Reduced MassFlow (t)`))
+
+ggsave(
+  paste0(Analysistag, "Figure7_ShoesEmissionReductionPercent.png"),
+  plot = Figure7,
+  path = figure_folder,
+  width = 13,
+  height = 6
+)
+
+Figure9DataIn <- CalcClothOverviewEffect(ShoesStatsOverview) |> 
+  filter(Measure %in% c("Production method finishes",
+                        "Replace",
+                        "External filter",
+                        "Lifetime"))
+
+Figure9 <-
+  PlotMeasureOverview(
+    MeasuresData = Figure9DataIn,
+    ReduceExclude = 0,
+    MeasOrdering = 'max',
+    PlotStats = c("p25_t","p75_t"),
+    OutputData = FALSE,
+    Scenario = "low"
+  )
+Figure9Data <-
+  PlotMeasureOverview(
+    MeasuresData = Figure9DataIn,
+    ReduceExclude = 0,
+    MeasOrdering = 'max',
+    PlotStats = c("p25_t","p75_t"),
+    OutputData = TRUE,
+    Scenario = "low"
+  )
+Figure9Data |> ungroup() |> 
+  group_by(scenario,statistics) |> 
+  summarise(Reduced = sum(`Reduced MassFlow (t)`))
+
+ggsave(
+  paste0(Analysistag, "Figure9_ShoesEmissionReductionPercentLow.png"),
+  plot = Figure9,
+  path = figure_folder,
+  width = 10,
+  height = 4
+)
+
+```
+
+# Measure effects - Per Environmental Compartment
+
+## Clothing
+
+```{r Calculations and figures}
+
+ ClothingStatsEnvComp <- PrepStatsEnvComp(Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+ saveRDS(ClothingStatsEnvComp, file = "Mitigation_measures/AggrData/ClothingStatsEnvComp.rds")
+
+# CalcClothOverviewEffect(ClothingStatsEnvComp,
+#                            AggrComponents = c("Scale","To_Compartment"))
+
+FigureperComp_percent <-   
+  PlotMeasureCompPercent(
+    MeasuresData = 
+      CalcClothOverviewEffect(ClothingStatsOverview=ClothingStatsEnvComp,
+                                 AggrComponents = c("Scale","To_Compartment")),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = FALSE,
+    Scenario = "high",
+    ErrorMargin = 1
+  )
+
+ggsave(
+  paste0(Analysistag, "FigureperComp_percent.png"),
+  plot = FigureperComp_percent,
+  path = figure_folder,
+  width = 10,
+  height = 6
+)
+FigureperComp_Abs <-
+  PlotMeasureComp(
+  MeasuresData = 
+    CalcClothOverviewEffect(ClothingStatsOverview=ClothingStatsEnvComp,
+                               AggrComponents = c("Scale","To_Compartment")),
+  ReduceExclude = 100,
+  MeasOrdering = 'min',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = FALSE
+)
+FigureperComp_AbsData <-
+  PlotMeasureComp(
+  MeasuresData = 
+    CalcClothOverviewEffect(ClothingStatsOverview=ClothingStatsEnvComp,
+                               AggrComponents = c("Scale","To_Compartment")),
+  ReduceExclude = 100,
+  MeasOrdering = 'min',
+  PlotStats = c("p25_t", "p50_t","p75_t"),
+  OutputData = TRUE
+)
+
+FigureperComp_AbsData |> ungroup() |> 
+  filter(Measure == "Vacuuming" & scenario == "high") |> 
+  group_by(statistics) |> 
+  mutate(percentage = `Baseline MassFlow (t)`/sum(`Baseline MassFlow (t)`)*100) |> 
+  select(To_Compartment,percentage,`Baseline MassFlow (t)`,To_Compartment) |> 
+  pivot_wider(names_from = statistics,
+              values_from = c(percentage,`Baseline MassFlow (t)`)) |> 
+  write_excel_csv(file = "Mitigation_measures/AggrData/ClothingComp_AbsData.csv")
+
+ggsave(
+  paste0(Analysistag, "FigureperComp_Abs.png"),
+  plot = FigureperComp_Abs,
+  path = figure_folder,
+  width = 12,
+  height = 6
+)
+
+
+
+```
+
+## Footwear
+
+```{r }
+ ShoesStatsEnvComp <- PrepStatsEnvComp(Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ShoesSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+ saveRDS(ShoesStatsEnvComp, file = "Mitigation_measures/AggrData/ShoesStatsEnvComp.rds")
+
+# CalcClothOverviewEffect(ClothingStatsEnvComp,
+#                            AggrComponents = c("Scale","To_Compartment"))
+
+FigureperComp_percent <-   
+  PlotMeasureCompPercent(
+    MeasuresData = 
+      CalcClothOverviewEffect(ClothingStatsOverview=ShoesStatsEnvComp,
+                                 AggrComponents = c("Scale","To_Compartment")),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = FALSE,
+    Scenario = "high",
+    ErrorMargin = 1
+  )
+
+ggsave(
+  paste0(Analysistag, "FigureperShoesComp_percent.png"),
+  plot = FigureperComp_percent,
+  path = figure_folder,
+  width = 10,
+  height = 6
+)
+FigureperComp_Abs <-
+  PlotMeasureComp(
+  MeasuresData = 
+    CalcClothOverviewEffect(ClothingStatsOverview=ShoesStatsEnvComp,
+                               AggrComponents = c("Scale","To_Compartment")),
+  ReduceExclude = 100,
+  MeasOrdering = 'min',
+  PlotStats = c("p25_t","p75_t"),
+  OutputData = FALSE
+)
+
+FigureperComp_AbsData <-
+  PlotMeasureComp(
+  MeasuresData = 
+    CalcClothOverviewEffect(ClothingStatsOverview=ShoesStatsEnvComp,
+                               AggrComponents = c("Scale","To_Compartment")),
+  ReduceExclude = 100,
+  MeasOrdering = 'min',
+  PlotStats = c("p25_t", "p50_t","p75_t"),
+  OutputData = TRUE
+)
+
+FigureperComp_AbsData |> ungroup() |> 
+  filter(Measure == "Vacuuming" & scenario == "high") |> 
+  group_by(statistics) |> 
+  mutate(percentage = `Baseline MassFlow (t)`/sum(`Baseline MassFlow (t)`)*100) |> 
+  select(To_Compartment,percentage,`Baseline MassFlow (t)`,To_Compartment) |> 
+  pivot_wider(names_from = statistics,
+              values_from = c(percentage,`Baseline MassFlow (t)`)) |> 
+  write_excel_csv(file = "Mitigation_measures/AggrData/ShoesComp_AbsData.csv")
+
+
+
+ggsave(
+  paste0(Analysistag, "FigureShoesPerComp_Abs.png"),
+  plot = FigureperComp_Abs,
+  path = figure_folder,
+  width = 12,
+  height = 6
+)
+```
+
+```{r}
+FunPrepStatsCloComp <- function(Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources, # The Sources in the data frame to consider
+                         SelectionSinks, # The Sinks in the data to aggregate to
+                         SelectYear){ # The year to provide the stats for
+  return(  
+    Clothing_data_all |>
+      filter(Year == SelectYear) |> # check, will be different
+      mutate(Mass_Polymer_t = Mass_Polymer_kt * 1000, .keep = "unused") |> # conert kt to ton
+      filter(To_Compartment %in% SelectionSinks) |> # only environmental sinks
+      mutate(`Environmental_compartment` = # make column indicating of this an air, water or soil sink.
+               case_when(
+                 str_detect(To_Compartment, 'water') ~ "water",
+                 str_detect(To_Compartment, 'air') ~ "air",
+                 str_detect(To_Compartment, 'soil') ~ "soil",
+                 .default = "none"
+               )) |>
+      filter(`Environmental_compartment` != "none",
+             From_compartment %in% c(SelectionSources)) |> 
+      ungroup() |> 
+      group_by(Scale,data_source,`Environmental_compartment`,RUN,From_compartment) |>
+      summarise(totalout = sum(Mass_Polymer_t)) |> 
+      # ungroup() |> group_by(Scale) |> 
+      summarise(Mean_mass_t = mean(totalout),
+                min_t = min(totalout),
+                p5_t =quantile(totalout,probs = 0.05),
+                p25_t =quantile(totalout,probs = 0.25),
+                p50_t =quantile(totalout,probs = 0.50),
+                p75_t =quantile(totalout,probs = 0.75),
+                p95_t =quantile(totalout,probs = 0.95),
+                max_t = max(totalout),
+                n = n())
+  )
+  
+}
+```
+
+first set of overview figures
+
+```{r}
+
+MeasuresClothingStatsL |> filter(Year == 2050, 
+                                 Scale == "NL",
+                                 Material_Type == "micro"|NA,
+                                 From_compartment == "Clothing (product sector)") |> distinct(To_Compartment)
+
+MeasuresClothingStatsL |> filter(To_Compartment == "Elimination")
+
+source_compartments <- c( "Apparel accessories",
+                          "Clothing (product sector)", "Clothing waste collection",             "Home textile waste collection",         "Household textiles (product sector)",   "Jackets and coats",                    
+                          "Leggings stockings tights and socks",   "Manufacturing of clothing",            "Sweaters and midlayers"  ,             
+                          "Technical textile waste collection",    "Technical textiles",                    "Textile recycling",                     "Wastewater (micro)",                   
+                          "Wastewater (macro)",                   
+                          "Boots"        ,                         "Closed-toed shoes"     ,                "Dresses skirts and jumpsuits"   ,       "Footwear waste collection" ,           
+                          "Open-toed shoes"   ,                    "Pants and shorts"    ,                  "Shirts and blouses"     ,               "Swimwear" ,                            
+                          "T-shirts" ,                             "Underwear"  )
+
+sink_compartments <- c("Agricultural soil",
+                       "Natural soil",
+                       "Residential soil",
+                       "Road side soil",
+                       "Surface water",
+                       "Outdoor air",
+                       "Sub-surface soil",
+                       "Sea water",
+                       "Landfill",
+                       "Elimination",
+                       "Export",
+                       "Secondary material reuse",
+                       "Plastic products",
+                       "Export of primary plastics",
+                       "Textile reuse",
+                       "Footwear reuse")
+
+
+
+ggplot(MeasuresClothingStatsL |> filter(Year == 2050, 
+                                        Scale == "NL",
+                                        Material_Type == "micro",
+                                        From_compartment ==  "Clothing (product sector)"), aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  facet_wrap(Polymer ~ To_Compartment)
+
+ggplot(MeasuresClothingStatsL |> 
+         filter(Year == 2050, 
+                Scale == "NL",
+                Material_Type == "micro",
+                From_compartment ==  "Clothing (product sector)",
+                statistics %in% c("p25_t","p50_t","p75_t")), 
+       aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  ggtitle("NL micro 2050") +
+  facet_wrap(Polymer ~ To_Compartment)
+
+ggplot(MeasuresClothingStatsL |> 
+         filter(Year == 2050, 
+                Scale == "NL",
+                statistics %in% c("p25_t","p50_t","p75_t"),
+                Material_Type == "macro",
+                From_compartment ==  "Clothing (product sector)"), 
+       aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  ggtitle("NL macro 2050") +
+  facet_wrap(Polymer ~ To_Compartment)
+
+ggplot(MeasuresClothingStatsL |> 
+         filter(Year == 2050, 
+                Scale == "NL",
+                Material_Type == "micro",
+                statistics %in% c("p25_t","p50_t","p75_t"),
+                From_compartment ==  "Clothing (product sector)",
+                `Reduced MassFlow (t)` > 0), 
+       aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  ggtitle("NL micro 2050 [Increased emissions or numeric uncertainty]") +
+  facet_wrap(Polymer ~ To_Compartment)
+
+ggplot(MeasuresClothingStatsL |> filter(Measure == "Wastewater",
+                                        statistics %in% c("p25_t","p50_t","p75_t"),
+                                        From_compartment ==  "Clothing (product sector)",
+                                        Year == 2050,
+                                        `Environmental Compartment`!= "other"), aes(x = `Reduced MassFlow (t)`, y = interaction(Polymer,Material_Type), colour = interaction(statistics,scenario))) +
+  geom_point() +
+  facet_wrap(~To_Compartment)
+
+Measures <- MeasuresClothingStatsL |> distinct(Measure) |> pull()
+
+for(i in 1:length(Measures)){
+  
+  plotM <- ggplot(MeasuresClothingStatsL |> filter(Measure == Measures[i],
+                                                   statistics %in% c("p25_t","p50_t","p75_t"),
+                                                   Year == 2050,
+                                                   `Environmental Compartment`!= "other",
+                                                   From_compartment ==  "Clothing (product sector)"), 
+                  aes(x = `Reduced MassFlow (t)`, 
+                      y = interaction(Polymer,Material_Type), 
+                      colour = interaction(statistics,scenario))) +
+    geom_point() +
+    facet_wrap(Scale~To_Compartment)+
+    ggtitle(Measures[i])
+  
+  ggsave(paste0(Analysistag,"_Measure_",Measures[i],".png"),
+         plot = plotM,
+         path = figure_folder,
+         width = 12, height = 6)
+}
+
+test3 <-
+  test2 |> ungroup() |> 
+  select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Material_Type, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+  group_by(across(-c(Material_Type,Polymer,To_Compartment, iD_source, `DiffMassFlow (t)`))) |> 
+  summarise(`DiffMassFlow (t)`= sum(`DiffMassFlow (t)`))
+
+
+test2 |> ungroup() |> 
+  select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Material_Type, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+  group_by(across(-c(Material_Type,Polymer, `DiffMassFlow (t)`))) |> 
+  summarise(`DiffMassFlow (t)`= sum(`DiffMassFlow (t)`))
+
+
+ggplot(test3 |> filter(diff_statistics %in% c("diff_p25_t","diff_p50_t","diff_p75_t"),
+                       Year == "2050"), aes(x = `DiffMassFlow (t)`, y = interaction(`Environmental Compartment`), colour = interaction(diff_statistics,scenario))) +
+  geom_point() +
+  facet_wrap(~Measure)
+
+# ggsave(paste0(Analysistag,"MeasurePerCompartment.png"),
+#      path = figure_folder,
+#      width = 12, height = 6)
+
+```
+
+## Do the same with micro and macro summed
+
+```{r}
+
+# sum of Macro and Micro plastics
+MeasuresClothingStatsM <- funMakeClothStatsMat(Clothing_data_statistics)
+
+MeasuresClothingStatsM |> filter(Year == 2050, 
+                                 Scale == "NL",
+                                 From_compartment == "Clothing (product sector)") |> distinct(To_Compartment)
+
+MeasuresClothingStatsL |> filter(To_Compartment == "Elimination")
+
+
+
+ggplot(MeasuresClothingStatsM |> filter(Year == 2050, 
+                                        Scale == "NL",
+                                        From_compartment == "Clothing (product sector)",
+                                        statistics %in% c("p25_t","p50_t","p75_t")), aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  facet_wrap(Polymer ~ To_Compartment)+
+  ggtitle("NL ALL Textile 2050")
+
+ggplot(MeasuresClothingStatsM |> 
+         filter(Year == 2050, 
+                Scale == "NL",
+                `Environmental Compartment`!="other",
+                From_compartment == "Clothing (product sector)",
+                statistics %in% c("p25_t","p50_t","p75_t")), 
+       aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  ggtitle("NL ENV Textile 2050") +
+  facet_wrap(Polymer ~ To_Compartment)
+
+ggplot(MeasuresClothingStatsM |> 
+         filter(Year == 2050, 
+                Scale == "NL",
+                `Environmental Compartment`!="other",
+                From_compartment == "Clothing (product sector)",
+                statistics %in% c("p25_t","p50_t","p75_t"),
+                `Reduced MassFlow (t)` > 0), 
+       aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  ggtitle("NL ENV Textile 2050 [Increased emissions or numeric uncertainty]") +
+  facet_wrap(Polymer ~ To_Compartment)
+
+ggplot(MeasuresClothingStatsM |> 
+         filter(Year == 2050, 
+                Scale == "NL",
+                `Environmental Compartment` != "other",
+                From_compartment == "Pants and shorts",
+                statistics %in% c("p25_t","p50_t","p75_t")), 
+       aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  ggtitle("NL ENV Pants and shorts 2050") +
+  facet_wrap(Polymer ~ To_Compartment)
+
+
+ggplot(MeasuresClothingStatsM |> filter(Measure == "Prewashing",
+                                        From_compartment == "Clothing (product sector)",
+                                        statistics %in% c("p25_t","p50_t","p75_t"),
+                                        Year == 2050), aes(x = `Reduced MassFlow (t)`, y = interaction(Polymer), colour = interaction(statistics,scenario))) +
+  geom_point() +
+  facet_wrap(~To_Compartment)
+
+Measures <- MeasuresClothingStatsL |> distinct(Measure) |> pull()
+
+MeasuresClothingStatsM |> filter(Measure == Measures[i],
+                                 statistics %in% c("p25_t","p50_t","p75_t"),
+                                 Year == 2050,
+                                 From_compartment == "Clothing (product sector)",
+                                 To_Compartment == "Elimination")
+
+test <- MeasuresClothingStatsM |> filter(Measure == Measures[i],
+                                         statistics %in% c("p25_t","p50_t","p75_t"),
+                                         Year == 2050,
+                                         From_compartment == "Clothing (product sector)",
+                                         `Environmental Compartment` != "other")
+
+
+for(i in 1:length(Measures)){
+  
+  plotM <- ggplot(MeasuresClothingStatsM |> filter(Measure == Measures[i],
+                                                   statistics %in% c("p25_t","p50_t","p75_t"),
+                                                   Year == 2050,
+                                                   From_compartment == "Clothing (product sector)",
+                                                   `Environmental Compartment`!="other"), aes(x = `Reduced MassFlow (t)`, 
+                                                                                              y = interaction(Polymer), 
+                                                                                              colour = interaction(statistics,scenario))) +
+    geom_point() +
+    facet_wrap(Scale~To_Compartment)+
+    ggtitle(Measures[i])
+  
+  ggsave(paste0(Analysistag,"_Measure_mm_",Measures[i],".png"),
+         plot = plotM,
+         path = figure_folder,
+         width = 12, height = 6)
+}
+
+MeasureEnvComp <-
+  MeasuresClothingStatsM |> ungroup() |> 
+  # select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+  group_by(across(-c(Polymer,To_Compartment, `Reduced MassFlow (t)`,`Measure MassFlow (t)`,`Baseline MassFlow (t)`))) |> 
+  summarise(across(`Reduced MassFlow (t)`:`Baseline MassFlow (t)`,sum))
+
+ggplot(MeasureEnvComp |> filter(statistics %in% c("p25_t","p50_t","p75_t"),
+                                Year == "2050",
+                                From_compartment == "Clothing (product sector)",
+                                `Environmental Compartment`!="other"), aes(x = `Reduced MassFlow (t)`, y = Measure, colour = interaction(statistics,scenario))) +
+  geom_point() +
+  facet_wrap(~`Environmental Compartment`)
+
+plot_theme = theme(
+  axis.title.x = element_text(size = 16),
+  axis.text = element_text(size = 14), 
+  plot.title = element_text(hjust = 0.5, vjust = 1),
+  axis.title.y = element_text(size = 16),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(1.5, 1, 1, 1, "cm")
+  #panel.grid.major = element_line(colour = "grey",size=0.25)
+)
+
+MeasuresClothingStatsM |> 
+  filter(statistics == "p25_t") |> 
+  mutate(statistics = "zero",
+         `Reduced MassFlow (t)` = 0,
+         `Measure MassFlow (t)` =0,
+         `Baseline MassFlow (t)` =0) |> rbind(MeasuresClothingStatsM) |> 
+  ungroup() |> 
+  filter(`Environmental Compartment`!="other",
+         Scale == "NL") |> 
+  
+  # select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+  group_by(across(-c(Polymer,To_Compartment,`Environmental Compartment`, `Reduced MassFlow (t)`,`Measure MassFlow (t)`,`Baseline MassFlow (t)`))) |> 
+  summarise(across(`Reduced MassFlow (t)`:`Baseline MassFlow (t)`,sum)) |> 
+  filter(statistics %in% c("p25_t","p50_t","p75_t","zero"),
+         Year == "2050",
+         From_compartment == "Clothing (product sector)") |> 
+  # mutate(Measure = fct_reorder(Measure, `Reduced MassFlow (t)`, .fun = 'min')) |> 
+  ggplot(aes(x = `Reduced MassFlow (t)`, y = (fct_reorder(Measure, (`Reduced MassFlow (t)`), .fun = 'median')), fill = "black")) +
+  geom_line(linewidth = 2) + 
+  facet_wrap(~scenario) +
+  # scale_x_continuous(expand = c(0,0))+
+  plot_theme +
+  labs(
+    # title = paste0("Reduction environmental emissions"),
+    # subtitle = "Maximum reduction environmental emissions",
+    # x = "Emissions to environment (t)",
+    y = ""
+  ) +
+  theme(legend.position = "none")
+
+MeasuresClothingStatsM |> 
+  filter(statistics == "p25_t") |> 
+  mutate(statistics = "zero",
+         `Reduced MassFlow (t)` = 0,
+         `Measure MassFlow (t)` =0,
+         `Baseline MassFlow (t)` =0) |> rbind(MeasuresClothingStatsM) |> 
+  ungroup() |> 
+  filter(`Environmental Compartment`!="other",
+         Scale == "NL") |> 
+  
+  # select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+  group_by(across(-c(Polymer,To_Compartment,`Environmental Compartment`, `Reduced MassFlow (t)`,`Measure MassFlow (t)`,`Baseline MassFlow (t)`))) |> 
+  summarise(across(`Reduced MassFlow (t)`:`Baseline MassFlow (t)`,sum)) |> 
+  filter(statistics %in% c("p25_t","p50_t","p75_t","zero"),
+         Year == "2050",
+         From_compartment == "Clothing (product sector)",
+         scenario == "low",
+         `Reduced MassFlow (t)`<= 0) |> 
+  # mutate(Measure = fct_reorder(Measure, `Reduced MassFlow (t)`, .fun = 'min')) |> 
+  ggplot(aes(x = `Reduced MassFlow (t)`, y = (fct_reorder(Measure, (`Reduced MassFlow (t)`), .fun = 'min')), fill = "black")) +
+  geom_line(linewidth = 2) + 
+  # scale_x_continuous(expand = c(0,0))+
+  plot_theme +
+  labs(
+    title = paste0("Low intervention scenario"),
+    # subtitle = "Maximum reduction environmental emissions",
+    # x = "Emissions to environment (t)",
+    y = ""
+  ) +
+  theme(legend.position = "none")
+
+MeasuresClothingStatsM |> 
+  filter(statistics == "p25_t") |> 
+  mutate(statistics = "zero",
+         `Reduced MassFlow (t)` = 0,
+         `Measure MassFlow (t)` =0,
+         `Baseline MassFlow (t)` =0) |> rbind(MeasuresClothingStatsM) |> 
+  ungroup() |> 
+  filter(`Environmental Compartment`!="other",
+         Scale == "NL") |> 
+  
+  # select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+  group_by(across(-c(Polymer,To_Compartment,`Environmental Compartment`, `Reduced MassFlow (t)`,`Measure MassFlow (t)`,`Baseline MassFlow (t)`))) |> 
+  summarise(across(`Reduced MassFlow (t)`:`Baseline MassFlow (t)`,sum)) |> 
+  filter(statistics %in% c("p25_t","p50_t","p75_t","zero"),
+         Year == "2050",
+         From_compartment == "Clothing (product sector)",
+         scenario == "high",
+         `Reduced MassFlow (t)`<= 0) |> 
+  # mutate(Measure = fct_reorder(Measure, `Reduced MassFlow (t)`, .fun = 'min')) |> 
+  ggplot(aes(x = `Reduced MassFlow (t)`, y = (fct_reorder(Measure, (`Reduced MassFlow (t)`), .fun = 'min')), fill = "black")) +
+  geom_line(linewidth = 2) + 
+  # scale_x_continuous(expand = c(0,0))+
+  plot_theme +
+  labs(
+    title = paste0("High intervention scenario"),
+    # subtitle = "Maximum reduction environmental emissions",
+    # x = "Emissions to environment (t)",
+    y = ""
+  ) +
+  theme(legend.position = "none")
+
+
+funPlotMeasureOverview(MeasuresClothingStatsM)
+
+```
+
+## Per measure
+
+```{r}
+source_compartments <- c( "Apparel accessories",
+                          "Clothing (product sector)", "Clothing waste collection",             "Home textile waste collection",         "Household textiles (product sector)",   "Jackets and coats",                    
+                          "Leggings stockings tights and socks",   "Manufacturing of clothing",            "Sweaters and midlayers"  ,             
+                          "Technical textile waste collection",    "Technical textiles",                    "Textile recycling",                     "Wastewater (micro)",                   
+                          "Wastewater (macro)",                   
+                          "Boots"        ,                         "Closed-toed shoes"     ,                "Dresses skirts and jumpsuits"   ,       "Footwear waste collection" ,           
+                          "Open-toed shoes"   ,                    "Pants and shorts"    ,                  "Shirts and blouses"     ,               "Swimwear" ,                            
+                          "T-shirts" ,                             "Underwear"  )
+
+NotSource <- c("Clothing (product sector)", "Clothing waste collection", "Home textile waste collection",         "Household textiles (product sector)", 
+               "Manufacturing of clothing", "Technical textile waste collection",    "Technical textiles",                    "Textile recycling",                     "Wastewater (micro)",                   
+               "Wastewater (macro)", "Footwear waste collection")
+
+Measures <- MeasuresClothingStatsM |> distinct(Measure) |> pull()
+
+for(i in 1:length(Measures)){
+  
+  PlotMSS <- funPlotMeasureSourceSpecific(MeasuresClothingStatsM,
+                                   NotSource=NotSource,
+                                   SelMeasure = Measures[i])
+  PlotMSS <- PlotMSS + ggtitle(Measures[i])
+  ggsave(paste0(Analysistag,"_Measure_SourceSpecific_",Measures[i],".png"),
+         plot = PlotMSS,
+         path = "Figures",
+         width = 12, height = 6)
+  
+  PlotMS <- funPlotMeasureSpecific(MeasuresClothingStatsM,
+                                   NotSource=NotSource,
+                                   SelMeasure = Measures[i])
+  PlotMS <- PlotMS + ggtitle(Measures[i])
+    ggsave(paste0(Analysistag,"_Measure_SourceSpecificEnv_",Measures[i],".png"),
+         plot = PlotMS,
+         path = "Figures",
+         width = 12, height = 6)
+  
+}
+
+
+
+
+```
+
+### Delicate washing cycle
+
+```{r}
+
+MeasuresClothingStatsL
+
+MeasuresClothingStatsL |> filter(Measure == Measures[3],
+                                                   statistics %in% c("p25_t","p50_t","p75_t"),
+                                                   Year == 2050,
+                                                   `Environmental Compartment`!= "other",
+                                                   From_compartment ==  "Clothing (product sector)")
+
+ MeasuresClothingStatsL |> 
+    filter(statistics == "p25_t") |> 
+    mutate(statistics = "zero",
+           `Reduced MassFlow (t)` = 0,
+           `Measure MassFlow (t)` =0,
+           `Baseline MassFlow (t)` =0) |> rbind(MeasuresClothingStatsL) |> 
+    ungroup() |> 
+    filter(`Environmental Compartment`!=EnvExclude,
+           Material_Type == MaterialType,
+           Scale == Scale,
+           From_compartment %in% SelTextSources) |> 
+    # select(Type, Scale, Polymer, From_compartment, `Environmental Compartment`, Year,diff_statistics,scenario,`DiffMassFlow (t)`, Measure) |>
+    group_by(across(-c(Polymer,To_Compartment, From_compartment, `Environmental Compartment`, `Reduced MassFlow (t)`,`Measure MassFlow (t)`,`Baseline MassFlow (t)`))) |> 
+    summarise(across(`Reduced MassFlow (t)`:`Baseline MassFlow (t)`,sum)) |> 
+    filter(statistics %in% PlotStats,
+           Year == Year)
+
+```
+
+# Old data prep
+
+```{r}
+Clothing_data_all_long <- Clothing_data_all %>%
+  unnest(cols = Mass_Polymer_kt)
+
+Clothing_data_all_long <- Clothing_data_all_long %>%
+  pivot_longer(
+    cols = starts_with("20"),
+    names_to = "Year",
+    values_to = "Mass_Polymer_kt"
+  )
+
+
+# make statistical summaries here before summation over categories.
+
+Clothing_data_summed_over_pol <- Clothing_data_all_long |>
+  group_by(Scale, From_compartment, To_compartment, Material_Type, data_source, RUN, Year) |>
+  summarise(Mass_Polymer_kt = sum(Mass_Polymer_kt)) |>
+  filter(!is.na(Material_Type))
+```
+
+Make violin plots
+
+```{R Specify the order of measures}
+
+measure_order <- c(# Production and retail measures
+  "Prewashing high",
+  "Prewashing low",
+  
+  "Production method finishes high",
+  "Production method finishes low",
+  
+  "Lifetime high",
+  "Lifetime low",
+  
+  "Replace high",
+  "Replace low",
+  
+  "Recycling high",
+  "Recycling low",
+  
+  "Fringes high",
+  "Fringes low",
+  
+  # Wastewater treatment 
+  "Wastewater high",
+  "Wastewater low",
+  
+  # Consumer measures
+  "Vacuuming high",
+  "Vacuuming low",
+  
+  "Delicate washing cycle high",
+  "Delicate washing cycle low",
+  
+  "Indoor air filter high",
+  "Indoor air filter low",
+  
+  "Clothesline instead of dryer high",
+  "Clothesline instead of dryer low",
+  
+  # Washer and dryer measures
+  "Washer dryer filters high",
+  "Washer dryer filters low",
+  
+  "External filter high",
+  "External filter low",
+  
+  "Clean dryer filter high",
+  "Clean dryer filter low",
+  
+  # Baseline
+  "Baseline"
+)
+
+measure_order <- rev(measure_order)
+```
+
+```{R Make the figures}
+# Sum all emissions
+Clothing_data_summed <- Clothing_data_summed_over_pol |>
+  group_by(Scale, From_compartment, Material_Type, data_source, RUN, Year) |>
+  summarise(Mass_polymer_t = sum(Mass_Polymer_kt)*1000) |>
+  filter(Year != 2022)
+
+summary_table <- Clothing_data_summed |>
+  group_by(data_source, Material_Type, Year, From_compartment) |>
+  summarise(Mean = mean(Mass_polymer_t),
+            Q5 = quantile(Mass_polymer_t, 0.05),
+            Q25 = quantile(Mass_polymer_t, 0.25),
+            Q75 = quantile(Mass_polymer_t, 0.75),
+            Q95 = quantile(Mass_polymer_t, 0.95)) |>
+  ungroup()
+
+# Calculate mean prevented plastic emissions per measure
+Baseline_summary <- summary_table |>
+  filter(data_source == "Baseline") |>
+  select(Material_Type, Year, From_compartment, Mean) |>
+  rename(Baseline_mean = Mean) 
+
+# Calculate prevented emissions
+Measures_summary <- summary_table |>
+  left_join(Baseline_summary, by = c("Material_Type", "Year", "From_compartment")) |>
+  mutate(Prevented_emissions_t = Baseline_mean-Mean) |>
+  mutate(Prevented_emissions_fraction = Prevented_emissions_t/Baseline_mean) |>
+  mutate(Prevented_emissions_percent_label = case_when(
+    data_source == "Baseline" ~ "0.00%",
+    Prevented_emissions_fraction < 0.025 & Prevented_emissions_fraction > -0.25 ~ "~0%",
+    TRUE ~ paste0(as.character(round(Prevented_emissions_fraction, 2)*100), "%")
+  )) |>
+  mutate(Prevented_emissions_t_label = case_when(
+    data_source == "Baseline" ~ "0.00",
+    Prevented_emissions_percent_label == "~0%" ~ "~0",
+    TRUE ~ as.character(round(Prevented_emissions_t, 2))
+  ))
+
+write.xlsx(Measures_summary, paste0(figure_folder, "/Mitigation_measure_effect_table.xlsx"))
+
+yoi <- c(2030, 2050)
+
+for(selectyear in yoi){
+  # Prepare data for plotting
+  Clothing_data_summed_plot <- Clothing_data_summed |>
+    filter(Year == selectyear)
+  
+  Clothing_data_micro <- Clothing_data_summed_plot |>
+    filter(Material_Type == "micro")
+  
+  Clothing_data_macro <- Clothing_data_summed_plot |>
+    filter(Material_Type == "macro")
+  
+  Measures_summary_micro <- Measures_summary |>
+    filter(Material_Type == "micro") |>
+    filter(Year == selectyear)
+  
+  Measures_summary_macro <- Measures_summary |>
+    filter(Material_Type == "macro") |>
+    filter(Year == selectyear)
+  
+  Clothing_data_micro$data_source <- factor(Clothing_data_micro$data_source, levels = measure_order)
+  Clothing_data_macro$data_source <- factor(Clothing_data_macro$data_source, levels = measure_order)
+  Measures_summary_micro$data_source <- factor(Measures_summary_micro$data_source, levels = measure_order)
+  Measures_summary_macro$data_source <- factor(Measures_summary_macro$data_source, levels = measure_order)
+  
+  micro_plot <- ggplot(data = Clothing_data_micro, mapping = aes(x = Mass_polymer_t, y = data_source, fill = data_source)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, fill = "white", color = "black") +
+    geom_text(
+      data = Measures_summary_micro,
+      aes(x = Mean, y = data_source, label = Prevented_emissions_t_label),
+      hjust = -0.1 # Adjust position if needed
+    ) +
+    labs(
+      title = paste0("Microplastic emissions to the environment from clothing in ", as.character(selectyear)),
+      subtitle = "Mean prevented emissions (t) shown in plot",
+      x = "Emissions to environment (t)",
+      y = ""
+    ) + 
+    scale_x_log10() + 
+    plot_theme + 
+    scale_fill_discrete() +
+    theme(legend.position = "none")
+  
+  print(micro_plot)
+  
+  ggsave(paste0("Mitigation_measures_micro_", as.character(selectyear),".png"),
+         path = figure_folder,
+         width = 12, height = 6)
+  
+  macro_plot <-  ggplot(data = Clothing_data_macro, mapping = aes(x = Mass_polymer_t, y = data_source, fill = data_source)) + 
+    geom_violin() +
+    geom_text(
+      data = Measures_summary_macro,
+      aes(x = Mean, y = data_source, label = Prevented_emissions_t_label),
+      hjust = -0.1 # Adjust position if needed
+    ) +
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, fill = "white", color = "black") +
+    labs(
+      title = paste0("Macroplastic emissions to the environment from clothing in ", as.character(selectyear)),
+      subtitle = "Mean prevented emissions (t) shown in plot",
+      x = "Emissions to environment (t)",
+      y = ""
+    ) + 
+    scale_x_log10() +
+    plot_theme  +
+    theme(legend.position = "none")
+  
+  print(macro_plot) 
+  
+  ggsave(paste0("Mitigation_measures_macro_", as.character(selectyear),".png"),
+         path = figure_folder,
+         width = 12, height = 6)
+}
+```

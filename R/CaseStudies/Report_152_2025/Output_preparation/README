@@ -1,0 +1,4 @@
+The files in this folder are used to convert the csv files generated with the 
+DPMFA model to RData files that can be used to make figures. In the folder 
+Report_152_2025/Data two RData files are provided; one for Baseline NL and one
+for Baseline EU. These can be used to make figures.

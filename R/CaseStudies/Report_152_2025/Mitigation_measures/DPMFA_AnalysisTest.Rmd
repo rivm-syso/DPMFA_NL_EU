@@ -1,0 +1,251 @@
+---
+title: "Mitigation_measures_figures"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Step 1: Prepare data file with output statistics
+
+A very large tibble is created based on the combining output from all mitigation measures for the low and high scenario's. This includes all the 10.000 monte carlo RUNs for three years resulting in `Clothing_data_all`. Best to use an environment that has 64G memory.
+
+The input for this script are RData files for each run of the DPMFA model, e.g. for the baseline or mitigation measure scenario as created using the `xScriptNamexx.R`.
+
+```{R Prepare data, include=FALSE}
+
+library(tidyverse)
+source("paths.R")
+### For reading in DPMFA outout
+data_folder <- paste0(output_path, "/")
+### Tag for naming output file
+out_date <- "20251015"
+
+# List all .R files in the functions directory and source
+sapply(list.files("Mitigation_measures/functions",pattern = "\\.R$", full.names = TRUE),
+       FUN = source)
+
+plot_theme = theme(
+  axis.title.x = element_text(size = 16),
+  axis.text = element_text(size = 14), 
+  plot.title = element_text(hjust = 0.5, vjust = 1),
+  axis.title.y = element_text(size = 16),
+  plot.background = element_rect(fill = 'white'),
+  panel.background = element_rect(fill = 'white'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(color='black'),
+  plot.margin = margin(1.5, 1, 1, 1, "cm")
+  #panel.grid.major = element_line(colour = "grey",size=0.25)
+)
+
+```
+
+# Analysis of results
+
+```{r Selection, message=FALSE, warning=FALSE}
+#### selection ####
+sink_compartments <- c("Agricultural soil",
+                       "Natural soil",
+                       "Residential soil",
+                       "Road side soil",
+                       "Surface water",
+                       "Outdoor air",
+                       "Sub-surface soil",
+                       "Sea water",
+                       "Landfill",
+                       "Elimination",
+                       "Export",
+                       "Secondary material reuse",
+                       "Plastic products",
+                       "Export of primary plastics",
+                       "Textile reuse",
+                       "Footwear reuse")
+
+source_compartments <- c( "Apparel accessories",
+                          "Clothing waste collection",
+                          "Home textile waste collection", 
+                          "Household textiles (product sector)", 
+                          "Jackets and coats",                    
+                          "Leggings stockings tights and socks", 
+                          "Manufacturing of clothing",       
+                          "Sweaters and midlayers"  ,             
+                          "Technical textile waste collection",  
+                          "Technical textiles",                  
+                          "Textile recycling",                  
+                          "Wastewater (micro)",                   
+                          "Wastewater (macro)",                   
+                          "Boots"        ,                  
+                          "Closed-toed shoes"     ,         
+                          "Dresses skirts and jumpsuits"   ,  
+                          "Footwear waste collection" ,      
+                          
+                          "Open-toed shoes"   ,           
+                          "Pants and shorts"    ,       
+                          "Shirts and blouses"     ,    
+                          "Swimwear" ,                            
+                          "T-shirts" ,                 
+                          "Underwear"  )
+
+TestDataPart1 <- PrepData(measure_names = 
+                            c("Baseline_NL_v3_uncertainty_test_2",
+                           "Baseline_NL_v3_uncertainty_test_3"),
+         Baseline = "Baseline_NL_v3_uncertainty_test_1",
+         data_folder = data_folder,
+         source_compartments = source_compartments,
+         sink_compartments = sink_compartments)
+
+TestDataPart2 <- PrepData(measure_names = 
+                            c("Baseline_NL_v3_uncertainty_test_1",
+                           "Baseline_NL_v3_uncertainty_test_3"),
+         Baseline = "Baseline_NL_v3_uncertainty_test_2",
+         data_folder = data_folder,
+         source_compartments = source_compartments,
+         sink_compartments = sink_compartments)
+
+```
+
+## Overview emission effects
+
+There is a need to create summaries for the correct aggregation of the data. E.g. all emissions going to environment, or just to soil or water. To do this a helper function is created.
+
+```{r Aggregation and statistics, message=FALSE, warning=FALSE}
+
+ClothingSources <- c( "Apparel accessories",
+                      "Jackets and coats",                    
+                      "Leggings stockings tights and socks",  
+                      "Sweaters and midlayers"  ,  
+                      "Dresses skirts and jumpsuits"   ,              
+                      "Pants and shorts"    ,                 
+                      "Shirts and blouses"     ,               
+                      "Swimwear" ,                            
+                      "T-shirts" ,                            
+                      "Underwear"  )
+
+ShoesSources <- c("Open-toed shoes"   ,  
+                  "Boots"        ,                         
+                  "Closed-toed shoes")
+
+
+
+ClothingStatsOverviewPart1 <- FunPrepStatsALL(Clothing_data_all = TestDataPart1, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+ClothingStatsOverviewPart2 <- FunPrepStatsALL(Clothing_data_all = TestDataPart2, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+```
+
+First we analyse the effect of all mitigation measures based on summing of all Polymers, Micr/Macro-plastics, Clothing sources and environmental sinks. This is for preparing the main overview figure.
+
+```{r Figure overview measure effect, message=FALSE, warning=FALSE}
+
+  PlotMeasureOverviewPercent(
+    MeasuresData = CalcClothOverviewEffect(
+      ClothingStatsOverview=ClothingStatsOverviewPart1
+    ),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = FALSE,
+    # Scenario = "high",
+    ErrorMargin = 0.5
+  )
+
+TestPart1 <- 
+PlotMeasureOverviewPercent(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverviewPart1),
+  ReduceExclude = 1000,
+  MeasOrdering = 'max',
+  PlotStats = c("Mean_mass_t","p25","p50","p75"),
+  OutputData = TRUE,
+  # Scenario = "high",
+  ErrorMargin = 1
+)
+TestPart2 <- 
+PlotMeasureOverviewPercent(
+  MeasuresData = CalcClothOverviewEffect(ClothingStatsOverviewPart2),
+  ReduceExclude = 1000,
+  MeasOrdering = 'max',
+  PlotStats = c("Mean_mass_t","p25","p50","p75"),
+  OutputData = TRUE,
+  # Scenario = "high",
+  ErrorMargin = 1
+)
+
+Test <- rbind(TestPart1,TestPart2)
+
+# percentage
+Test |> select(`Emission reduction (%)`) |> abs() |>  max()
+
+# Flow (ton)
+Test |> select(`Reduced MassFlow (t)`) |> abs() |>  max()
+
+
+```
+
+## Per Environmental Compartment effects
+
+```{r message=FALSE, warning=FALSE}
+
+ClothingStatsEnvComp1 <- PrepStatsEnvComp(Clothing_data_all = TestDataPart1, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+ClothingStatsEnvComp2 <- PrepStatsEnvComp(Clothing_data_all = TestDataPart2, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+# funCalcClothOverviewEffect(ClothingStatsEnvComp,
+#                            AggrComponents = c("Scale","To_Compartment"))
+
+  PlotMeasureCompPercent(
+    MeasuresData = 
+      CalcClothOverviewEffect(ClothingStatsOverview=ClothingStatsEnvComp1,
+                                 AggrComponents = c("Scale","To_Compartment")),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = FALSE,
+    # Scenario = "high",
+    ErrorMargin = 0.5
+  )
+  
+Test1 <-
+  PlotMeasureCompPercent(
+    MeasuresData = 
+      CalcClothOverviewEffect(ClothingStatsOverview=ClothingStatsEnvComp1,
+                                 AggrComponents = c("Scale","To_Compartment")),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = TRUE,
+    # Scenario = "high",
+    ErrorMargin = 1
+  )
+
+Test2 <-
+  PlotMeasureCompPercent(
+    MeasuresData = 
+      CalcClothOverviewEffect(ClothingStatsOverview=ClothingStatsEnvComp2,
+                                 AggrComponents = c("Scale","To_Compartment")),
+    ReduceExclude = 100,
+    MeasOrdering = 'max',
+    PlotStats = c("Mean_mass_t", "zero"),
+    OutputData = TRUE,
+    # Scenario = "high",
+    ErrorMargin = 1
+  )
+Test <- rbind(Test1,Test2)
+
+# percentage
+Test |> select(`Emission reduction (%)`) |> abs() |>  max()
+
+# Flow (ton)
+Test |> select(`Reduced MassFlow (t)`) |> abs() |>  max()
+
+```

@@ -12,11 +12,16 @@ Created on 09.04.2020
 """
 
 import os
-
-# Set working directory to where the scripts are located
-os.chdir("N:/Documents/MyFolder")
-
 import config
+import paths
+
+#%%
+# Set working directory to where the scripts are located
+if config.OS_env == 'win':
+    os.chdir(paths.win_main_folder)
+else: 
+    os.chdir(paths.lin_main_folder)
+
 import csv
 import numpy as np
 from dpmfa import simulator as sc
@@ -35,13 +40,16 @@ mat = "RUBBER"
 sel = "Tyre wear"
 mainfolder = os.getcwd()
 
+
 # Steps to find or create folders  
 if config.OS_env == 'win': 
-    inputfolder = ".\\input\\" + reg + "\\" 
+    inputfolder = ".\\input\\" + reg + "\\"
+    outputbasefolder = mainfolder
 else:
-    inputfolder = "./input/" + reg + "/"  
+    inputfolder = "./input/" + reg + "/"
+    outputbasefolder = outputbasefolder_lin  
 
-db_name = reg + "_"+ sel + ".db" 
+db_name = reg + "_" + sel + ".db" 
 
 os.chdir(inputfolder) 
 
@@ -76,17 +84,27 @@ simulator.runSimulation()
 print('Simulation succesful...\n')
 
 # Change directory back to the main folder (where the scripts are)
-os.chdir(mainfolder)
+os.chdir(outputbasefolder)
 
 # If it does not exist, create an output folder
-outputfolder = ".\\output\\" + sel + "\\" + mat + "\\" 
-if not os.path.exists(outputfolder):
-    os.makedirs(outputfolder)
+if config.OS_env == "win":
+    outputfolder = ".\\output\\" +  mat + "\\"
+else:
+    outputfolder = "./output/" + mat + "/" 
     
 # If it does not exist, create a CSV folder in the output folder
-csvfolder = ".\\output\\" + sel + "\\" + mat + "\\" + "csv\\"
+if config.OS_env == "win":
+    csvfolder = ".\\output\\" + mat + "\\" + "csv\\"
+else: 
+    csvfolder = "./output/" + mat + "/" + "csv/"
+    
 if not os.path.exists(csvfolder):
     os.makedirs(csvfolder)
+else:
+    # If the folder exists, remove all csv files in it
+    for file_name in os.listdir(csvfolder):
+        file_path = os.path.join(csvfolder, file_name)
+        os.remove(file_path)
     
 #%%
 ### Get inflows, outflows, stocks and sinks

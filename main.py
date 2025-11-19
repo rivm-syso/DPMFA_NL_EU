@@ -7,9 +7,16 @@ Created on Mon May 15 09:36:29 2023
 
 import os
 import sys
+import config
+
+import paths
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/MyFolder")
+if config.OS_env == 'win':
+    os.chdir(paths.win_main_folder)
+else: 
+    os.chdir(paths.lin_main_folder)
+    
 mainfolder = os.getcwd()
 
 if os.path.isfile('main.py') == False:
