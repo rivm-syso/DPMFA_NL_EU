@@ -1,8 +1,6 @@
 DPMFA_NL_EU_measures
 ================
 
-# README
-
 The model in this (DPMFA_NL_EU/DPMFA_NL_EU_measures) folder is nearly
 the same model as the model in the DPMFA_NL_EU folder, with one
 important difference: the model has been adjusted so that it can be used
@@ -114,13 +112,3 @@ calculatedMassFlows.
 
 The Calculate_mass_flows\_‘inputfile_name’.py scripts can also be run in
 parallel for each of the maininputfiles.
-
-------------------------------------------------------------------------
-
-Licensed under Attribution-NonCommercial-ShareAlike CC BY-NC-SA
-(<https://creativecommons.org/licenses/#licenses>)
-
-Reason for license is this work being based on DPMFA package and other
-work by EMPA.
-
-<https://github.com/empa-tsl/plastic-dpmfa>
