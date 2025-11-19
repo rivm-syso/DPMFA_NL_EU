@@ -2,7 +2,7 @@
 """
 Created on Tue Dec  3 10:45:15 2024
 
-@author: hidsa
+
 """
 # From the excel maininput file, reads the Input_NL or Input_EU sheet. 
 # The sheets each contain the columns 'Compartment', 'Year', 'Material', 
@@ -74,7 +74,7 @@ def project_input(file, inputsheetname, startyear, endyear, nodatayear, projecti
         df = df.drop_duplicates()
         df_og = df.copy()
         df_og = df.set_index('year')
-        last_year = df_og.index.max()
+        last_year = int(df_og.index.max())
         nodatayear_to_lastyear = pd.DataFrame({'year': range(nodatayear, last_year+1)})
         df_og = df_og.reset_index() 
         df = df[['year', 'value']].drop_duplicates()

@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- affiliation: National Institute for Public Health and the Environment
+  family-names: Hids
+  given-names: Anne
+  orcid: 'https://orcid.org/0009-0006-0325-5924'
+- affiliation: National Institute for Public Health and the Environment
+  family-names: Quik
+  given-names: Joris T.K.
+  orcid: 'https://orcid.org/0000-0002-7964-3652'
+- affiliation: National Institute for Public Health and the Environment
+  family-names: Steenmeijer
+  given-names: Michelle A.
+  orcid: 'https://orcid.org/0000-0003-0278-1077'
+- affiliation: National Institute for Public Health and the Environment
+  family-names: Mellink
+  given-names: Yvette
+  orcid: 'https://orcid.org/0000-0003-4838-8932'
+- affiliation: National Institute for Public Health and the Environment
+  family-names: van Bruggen
+  given-names: Anne
+  orcid: 'https://orcid.org/0000-0003-0621-714X'
+license: "CC-BY-NC-SA-4.0"
+type: software
+title: "DPMFA_NL_EU"
+doi: 10.5281/zenodo.12636553
+url: "https://github.com/rivm-syso/DPMFA_NL_EU"

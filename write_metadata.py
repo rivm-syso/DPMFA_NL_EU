@@ -6,10 +6,15 @@ Created on Tue Mar 12 08:02:07 2024
 """
 
 import os
+import config
+import paths
 
 # Set working directory to where the scripts are located
-os.chdir("N:/Documents/MyFolder")
-import config
+if config.OS_env == 'win': 
+    os.chdir(paths.win_main_folder)
+else:
+    os.chdir(paths.outputbasefolder_lin)  
+
 import datetime
 
 #%% Write a metadatafile 
@@ -18,7 +23,7 @@ import datetime
 if config.OS_env == 'win': 
     mdfilename = "output\\metadata.txt" 
 else:
-    mdfilename = "/output/metadata.txt" 
+    mdfilename = "output/metadata.txt" 
 
 # Ensure the output directory exists
 os.makedirs(os.path.dirname(mdfilename), exist_ok=True)

@@ -169,10 +169,10 @@ if NL_nested == True and reg == "EU":
     input_['id'] = original_ids
     
 elif reg == "NL":
-    input_NL = project_input(file, "Input_NL", startyear, endyear, nodatayear, projections)
+    input_ = project_input(file, "Input_NL", startyear, endyear, nodatayear, projections)
     
 elif reg == "EU":
-    input_EU = project_input(file, "Input_EU", startyear, endyear, nodatayear, projections)
+    input_ = project_input(file, "Input_EU", startyear, endyear, nodatayear, projections)
 
 # reset index and id
 input_ = input_.reset_index(drop=True)
@@ -184,7 +184,7 @@ print('Input to csv done.. \n')
 #%% Transfer coefficients
 #########################################
 
-# From the excel maininput file, reads the 'Transfer coeficients' sheet.
+# From the excel maininput file, reads the 'Transfer coefficients' sheet.
 # The sheet contains the columns 'Compartment 1', 'Compartment 2', 'Year', 'Material', 
 # 'Source', and columns containing the DQIS scores for each of the 5 categories. 
 # The data that is read from the excel sheet is modified to match the format

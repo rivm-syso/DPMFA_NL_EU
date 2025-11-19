@@ -187,7 +187,7 @@ for sel in sellist:
          
     # Change working directory to selfolder  
     os.chdir(selfolder) 
-        
+    
     # Create a path for the copied db file
     db_name = reg + "_" + sel + ".db"
     pathtoDB = os.path.abspath(db_name)
@@ -202,9 +202,20 @@ for sel in sellist:
     # Open a connection to the new database
     connection = sqlite3.connect(pathtoDB)
     cursor = connection.cursor()
+       
+    if sel == "Clothing" and reg == "NL":
+        comps = ["Import of clothing (EU)", "Import of clothing (Global)"]
+    elif sel == "Clothing" and reg == "EU": 
+        comps = ["Import of clothing (Global)", "Import of plastic sheets", "Import of yarn", 'Domestic primary plastic production', 'Import of primary plastics']    
+    else:
+        comps = [sel]
     
-    # Select selection sel[i] from the database
-    cursor.execute("SELECT * FROM input WHERE comp = '"+sel+"'")
+    query = f"SELECT * FROM input WHERE comp IN ({','.join(['?'] * len(comps))})"
+    
+    # Execute the query with the list of `comps` as parameters
+    cursor.execute(query, comps)
+    
+    # Convert the results to a DataFrame
     input_selection = pd.DataFrame(cursor.fetchall())
     
     # Rename columns of dataframe
