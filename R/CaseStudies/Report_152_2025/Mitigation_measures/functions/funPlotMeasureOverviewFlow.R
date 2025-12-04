@@ -36,7 +36,7 @@ PlotMeasureOverview <- function(MeasuresData,
     labs(
       # title = paste0("Reduction environmental emissions"),
       # subtitle = "Maximum reduction environmental emissions",
-      # x = "Potential Emission reduction (%)",
+      x = "Mass flow (t)",
       y = ""
     ) +
     theme(legend.position = "none")
@@ -60,7 +60,7 @@ PlotMeasureOverview <- function(MeasuresData,
       labs(
         # title = paste0("Reduction environmental emissions"),
         # subtitle = "Maximum reduction environmental emissions",
-        # x = "Potential Emission reduction (%)",
+        x = "Mass flow (t)",
         y = ""
       ) +
       theme(legend.position = "none")

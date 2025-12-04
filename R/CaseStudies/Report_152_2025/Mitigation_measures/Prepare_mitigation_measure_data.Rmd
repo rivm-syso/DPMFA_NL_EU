@@ -1,0 +1,184 @@
+---
+title: "Mitigation_measures_figures"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Step 1: Prepare data file with output statistics
+
+A very large tibble is created based on the combining output from all mitigation measures for the low and high scenario's. This includes all the 10.000 monte carlo RUNs for three years resulting in `Clothing_data_all`. Best to use an environment that has 64G memory.
+
+The input for this script are RData files for each run of the DPMFA model, e.g. for the baseline or mitigation measure scenario as created using the `xScriptNamexx.R`.
+
+```{R Load functions}
+files <- list.files("R/CaseStudies/Report_152_2025/Mitigation_measures/functions", pattern = "\\.R$", full.names = TRUE)
+for (f in files) source(f)
+```
+
+```{R Prepare raw data, include=FALSE}
+library(tidyverse)
+source("R/CaseStudies/Report_152_2025/paths.R")
+```
+
+```{R}
+data_folder <- paste0(output_path, "/")
+
+### Tag for naming output file
+out_date <- "20251017"
+
+#### selection ####
+Sink_compartments <- c("Agricultural soil",
+                       "Natural soil",
+                       "Residential soil",
+                       "Road side soil",
+                       "Surface water",
+                       "Outdoor air",
+                       "Sub-surface soil",
+                       "Sea water",
+                       "Landfill",
+                       "Elimination",
+                       "Export",
+                       "Secondary material reuse",
+                       "Plastic products",
+                       "Export of primary plastics",
+                       "Textile reuse",
+                       "Footwear reuse")
+
+Source_compartments <- c( "Apparel accessories",
+                          "Clothing waste collection",
+                          "Home textile waste collection", 
+                          "Household textiles (product sector)", 
+                          "Jackets and coats",                    
+                          "Leggings stockings tights and socks", 
+                          "Manufacturing of clothing",       
+                          "Sweaters and midlayers"  ,             
+                          "Technical textile waste collection",  
+                          "Technical textiles",                  
+                          "Textile recycling",                  
+                          "Wastewater (micro)",                   
+                          "Wastewater (macro)",                   
+                          "Boots"        ,                  
+                          "Closed-toed shoes"     ,         
+                          "Dresses skirts and jumpsuits"   ,  
+                          "Footwear waste collection" ,
+                          "Open-toed shoes"   ,           
+                          "Pants and shorts"    ,       
+                          "Shirts and blouses"     ,    
+                          "Swimwear" ,                            
+                          "T-shirts" ,                 
+                          "Underwear"  )
+
+Measure_names <- c("Fringes_low",
+                   "Fringes_high",
+                   
+                   "Wastewater_low",
+                   "Wastewater_high",
+                   
+                   "Recycling_low",
+                   "Recycling_high",
+                   
+                   "Prewashing_low",
+                   "Prewashing_high",
+                   
+                   "Replace_low",
+                   "Replace_high",
+                   
+                   "Washer_dryer_filters_low",
+                   "Washer_dryer_filters_high",
+                   
+                   "Clean_dryer_filter_low",
+                   "Clean_dryer_filter_high",
+                   
+                   "External_filter_low",
+                   "External_filter_high",
+                   
+                   "Vacuuming_low",
+                   "Vacuuming_high",
+                   
+                   "Production_method_finishes_low",
+                   "Production_method_finishes_high",
+                   
+                   "Delicate_washing_cycle_low",
+                   "Delicate_washing_cycle_high",
+                   
+                   "Clothesline_instead_of_dryer_low",
+                   "Clothesline_instead_of_dryer_high",
+                   
+                   "Lifetime_low",
+                   "Lifetime_high")
+
+Clothing_data_all <- PrepData(data_folder = data_folder,
+                              Baseline = "Baseline_NL_v3",
+                              measure_names = Measure_names,
+                              source_compartments = Source_compartments,
+                              sink_compartments = Sink_compartments)
+
+# TEMPORARY FIX for superficial error Replace was Run with config scale set to EU, while the model input etc. was already prepared for NL. So it is just the naming. TODO: in further setup of this pipeline make this dependent on the actual input used in DPMFA, not just the string in the config which can change between preparing input and running the model!
+
+Clothing_data_all <-
+  Clothing_data_all |> mutate(Scale = str_replace_all(Scale, "EU", "NL"))
+
+saveRDS(Clothing_data_all, 
+        file = paste0(data_folder,
+                      out_date,"_ClothingDataAll.rds"))
+```
+
+# Create aggregated dataframes
+There is a need to create summaries for the correct aggregation of the data. E.g. all emissions going to environment, or just to soil or water. To do this a helper function is created.
+
+```{R Define clothing and footwear compartments}
+ClothingSources <- c( "Apparel accessories",
+                      "Jackets and coats",                    
+                      "Leggings stockings tights and socks",  
+                      "Sweaters and midlayers",  
+                      "Dresses skirts and jumpsuits",              
+                      "Pants and shorts",                 
+                      "Shirts and blouses",               
+                      "Swimwear" ,                            
+                      "T-shirts" ,                            
+                      "Underwear")
+
+ShoesSources <- c("Open-toed shoes",  
+                  "Boots",                         
+                  "Closed-toed shoes")
+```
+
+```{R Create aggregated dataframes for clothing}
+Clothing_data_all <- readRDS(paste0(data_folder, "20251017_ClothingDataAll.rds"))
+
+Analysistag <- "20251017"
+
+ClothingStatsOverview <- FunPrepStatsALL(Clothing_data_all = Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+saveRDS(ClothingStatsOverview, file = "R/CaseStudies/Report_152_2025/Mitigation_measures/AggrData/ClothingStatsOverview.rds")
+
+ClothingStatsEnvComp <- PrepStatsEnvComp(Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ClothingSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+saveRDS(ClothingStatsEnvComp, file = "R/CaseStudies/Report_152_2025/Mitigation_measures/AggrData/ClothingStatsEnvComp.rds")
+```
+
+```{R Create aggregated dataframes for footwear}
+ShoesStatsOverview <- FunPrepStatsALL(Clothing_data_all = Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                                         SelectionSources = ShoesSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                                         SelectYear = 2050)
+
+saveRDS(ShoesStatsOverview, 
+        file = "R/CaseStudies/Report_152_2025/Mitigation_measures/AggrData/ShoesStatsOverview.rds")
+
+ShoesStatsEnvComp <- PrepStatsEnvComp(Clothing_data_all, # Full tibble/data frame with DPMFA output from PrepData
+                         SelectionSources = ShoesSources, # The Sources in the data frame to consider (e.g. clothingsource only or also Footwear)
+                         SelectionEnvSinks = c("air","water","soil"), # Options are "water, air, soil and none"
+                         SelectYear = 2050)
+
+saveRDS(ShoesStatsEnvComp, file = "R/CaseStudies/Report_152_2025/Mitigation_measures/AggrData/ShoesStatsEnvComp.rds")
+```
+
+
